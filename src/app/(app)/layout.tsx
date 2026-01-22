@@ -34,11 +34,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/invoices', icon: FileText, label: 'Invoices' },
-  { href: '/customers', icon: Users, label: 'Customers' },
-  { href: '/products', icon: Package, label: 'Products' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero' },
+  { href: '/invoices', icon: FileText, label: 'Facturas' },
+  { href: '/customers', icon: Users, label: 'Clientes' },
+  { href: '/products', icon: Package, label: 'Productos' },
+  { href: '/settings', icon: Settings, label: 'Configuración' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -96,7 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent className="w-56 mb-2" side="top" align="start">
                 <DropdownMenuItem>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <Link href="/login">Log out</Link>
+                  <Link href="/login">Cerrar Sesión</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

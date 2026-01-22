@@ -15,7 +15,7 @@ export type Product = {
   taxRate: number; // e.g., 0.15 for 15% IVA
 };
 
-export type InvoiceStatus = "Generated" | "Sent" | "Authorized" | "Not Authorized" | "Cancelled" | "Error";
+export type InvoiceStatus = "Generada" | "Enviada" | "Autorizada" | "No Autorizada" | "Anulada" | "Error";
 
 export type InvoiceItem = {
   product: Product;

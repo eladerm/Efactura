@@ -16,16 +16,16 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 export const columns: ColumnDef<Product>[] = [
   {
     accessorKey: 'code',
-    header: 'Code',
+    header: 'Código',
   },
   {
     accessorKey: 'name',
-    header: 'Name',
+    header: 'Nombre',
     cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>,
   },
   {
     accessorKey: 'price',
-    header: () => <div className="text-right">Price</div>,
+    header: () => <div className="text-right">Precio</div>,
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue('price'));
       const formatted = new Intl.NumberFormat('en-US', {
@@ -37,7 +37,7 @@ export const columns: ColumnDef<Product>[] = [
   },
     {
     accessorKey: 'taxRate',
-    header: () => <div className="text-right">Tax</div>,
+    header: () => <div className="text-right">Impuesto</div>,
     cell: ({ row }) => {
       const taxRate = parseFloat(row.getValue('taxRate'));
       const formatted = new Intl.NumberFormat('en-US', {
@@ -56,20 +56,20 @@ export const columns: ColumnDef<Product>[] = [
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">Abrir menú</span>
                 <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <Pencil className="mr-2 h-4 w-4" />
-                    Edit
+                    Editar
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    Eliminar
                 </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>

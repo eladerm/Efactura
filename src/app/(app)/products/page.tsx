@@ -9,10 +9,10 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function ProductsPage() {
   return (
     <div>
-      <PageHeader title="Products & Services">
+      <PageHeader title="Productos y Servicios">
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          New Product
+          Nuevo Producto
         </Button>
       </PageHeader>
       <Card>

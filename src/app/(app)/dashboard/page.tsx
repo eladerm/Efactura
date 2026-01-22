@@ -7,30 +7,30 @@ import { RecentInvoices } from '@/components/dashboard/recent-invoices';
 export default function DashboardPage() {
   return (
     <div>
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Tablero" />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <StatCard
-          title="Total Revenue"
+          title="Ingresos Totales"
           value="$45,231.89"
-          description="+20.1% from last month"
+          description="+20.1% desde el mes pasado"
           Icon={DollarSign}
         />
         <StatCard
-          title="Invoices Authorized"
+          title="Facturas Autorizadas"
           value="+2350"
-          description="+180.1% from last month"
+          description="+180.1% desde el mes pasado"
           Icon={FileText}
         />
         <StatCard
-          title="New Customers"
+          title="Nuevos Clientes"
           value="+12"
-          description="+19% from last month"
+          description="+19% desde el mes pasado"
           Icon={Users}
         />
         <StatCard
-          title="Pending Authorization"
+          title="Pendientes de Autorización"
           value="15"
-          description="Awaiting SRI response"
+          description="Esperando respuesta del SRI"
           Icon={AlertCircle}
         />
       </div>

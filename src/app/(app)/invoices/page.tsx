@@ -11,11 +11,11 @@ export default function InvoicesPage() {
     const invoices = getFullInvoices();
   return (
     <div>
-      <PageHeader title="Invoices">
+      <PageHeader title="Facturas">
         <Button asChild>
           <Link href="/invoices/new">
             <PlusCircle className="mr-2 h-4 w-4" />
-            New Invoice
+            Nueva Factura
           </Link>
         </Button>
       </PageHeader>

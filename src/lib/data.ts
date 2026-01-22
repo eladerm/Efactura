@@ -9,20 +9,20 @@ export const customers: Customer[] = [
 ];
 
 export const products: Product[] = [
-  { id: "PROD-001", code: "SRV-CONS", name: "Consulting Services", price: 150.00, taxRate: 0.15 },
-  { id: "PROD-002", code: "PROD-LAP", name: "Laptop Pro 15-inch", price: 1200.00, taxRate: 0.15 },
-  { id: "PROD-003", code: "PROD-MOUSE", name: "Wireless Mouse", price: 25.00, taxRate: 0.15 },
-  { id: "PROD-004", code: "SRV-WEB", name: "Web Development (per hour)", price: 80.00, taxRate: 0.15 },
-  { id: "PROD-005", code: "PROD-KEYB", name: "Mechanical Keyboard", price: 75.00, taxRate: 0.15 },
-  { id: "PROD-006", code: "SRV-MAINT", name: "Monthly Maintenance Plan", price: 200.00, taxRate: 0.15 },
+  { id: "PROD-001", code: "SRV-CONS", name: "Servicios de Consultoría", price: 150.00, taxRate: 0.15 },
+  { id: "PROD-002", code: "PROD-LAP", name: "Laptop Pro 15 pulgadas", price: 1200.00, taxRate: 0.15 },
+  { id: "PROD-003", code: "PROD-MOUSE", name: "Mouse Inalámbrico", price: 25.00, taxRate: 0.15 },
+  { id: "PROD-004", code: "SRV-WEB", name: "Desarrollo Web (por hora)", price: 80.00, taxRate: 0.15 },
+  { id: "PROD-005", code: "PROD-KEYB", name: "Teclado Mecánico", price: 75.00, taxRate: 0.15 },
+  { id: "PROD-006", code: "SRV-MAINT", name: "Plan de Mantenimiento Mensual", price: 200.00, taxRate: 0.15 },
 ];
 
 export const invoices: Omit<Invoice, 'customer' | 'items'>[] & { customerId: string, itemIds: {productId: string, quantity: number, discount: number}[] } = [
-  { id: "INV-001", invoiceNumber: "001-001-000000001", customerId: "CUS-002", issueDate: "2023-10-26", total: 172.50, status: "Authorized", itemIds: [{ productId: "PROD-001", quantity: 1, discount: 0 }] },
-  { id: "INV-002", invoiceNumber: "001-001-000000002", customerId: "CUS-003", issueDate: "2023-10-27", total: 1402.50, status: "Sent", itemIds: [{ productId: "PROD-002", quantity: 1, discount: 0 }, { productId: "PROD-003", quantity: 1, discount: 0 }] },
-  { id: "INV-003", invoiceNumber: "001-001-000000003", customerId: "CUS-004", issueDate: "2023-10-28", total: 86.25, status: "Not Authorized", itemIds: [{ productId: "PROD-005", quantity: 1, discount: 0 }] },
-  { id: "INV-004", invoiceNumber: "001-001-000000004", customerId: "CUS-005", issueDate: "2023-10-29", total: 184.00, status: "Generated", itemIds: [{ productId: "PROD-004", quantity: 2, discount: 0 }] },
-  { id: "INV-005", invoiceNumber: "001-001-000000005", customerId: "CUS-002", issueDate: "2023-10-30", total: 230.00, status: "Cancelled", itemIds: [{ productId: "PROD-006", quantity: 1, discount: 0 }] },
+  { id: "INV-001", invoiceNumber: "001-001-000000001", customerId: "CUS-002", issueDate: "2023-10-26", total: 172.50, status: "Autorizada", itemIds: [{ productId: "PROD-001", quantity: 1, discount: 0 }] },
+  { id: "INV-002", invoiceNumber: "001-001-000000002", customerId: "CUS-003", issueDate: "2023-10-27", total: 1402.50, status: "Enviada", itemIds: [{ productId: "PROD-002", quantity: 1, discount: 0 }, { productId: "PROD-003", quantity: 1, discount: 0 }] },
+  { id: "INV-003", invoiceNumber: "001-001-000000003", customerId: "CUS-004", issueDate: "2023-10-28", total: 86.25, status: "No Autorizada", itemIds: [{ productId: "PROD-005", quantity: 1, discount: 0 }] },
+  { id: "INV-004", invoiceNumber: "001-001-000000004", customerId: "CUS-005", issueDate: "2023-10-29", total: 184.00, status: "Generada", itemIds: [{ productId: "PROD-004", quantity: 2, discount: 0 }] },
+  { id: "INV-005", invoiceNumber: "001-001-000000005", customerId: "CUS-002", issueDate: "2023-10-30", total: 230.00, status: "Anulada", itemIds: [{ productId: "PROD-006", quantity: 1, discount: 0 }] },
   { id: "INV-006", invoiceNumber: "001-001-000000006", customerId: "CUS-003", issueDate: "2023-10-31", total: 552.00, status: "Error", itemIds: [{ productId: "PROD-001", quantity: 3, discount: 0 }] },
 ];
 

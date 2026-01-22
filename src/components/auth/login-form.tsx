@@ -21,14 +21,14 @@ export function LoginForm() {
     <div className="mx-auto grid w-[350px] gap-6">
       <div className="grid gap-2 text-center">
         <Logo className="justify-center text-primary" />
-        <h1 className="text-3xl font-bold font-headline mt-4">Welcome Back</h1>
+        <h1 className="text-3xl font-bold font-headline mt-4">Bienvenido de Nuevo</h1>
         <p className="text-balance text-muted-foreground">
-          Enter your email below to login to your account
+          Ingresa tu correo para iniciar sesión en tu cuenta
         </p>
       </div>
       <form className="grid gap-4" onSubmit={handleLogin}>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Correo Electrónico</Label>
           <Input
             id="email"
             type="email"
@@ -39,27 +39,27 @@ export function LoginForm() {
         </div>
         <div className="grid gap-2">
           <div className="flex items-center">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Link
               href="#"
               className="ml-auto inline-block text-sm underline"
             >
-              Forgot your password?
+              ¿Olvidaste tu contraseña?
             </Link>
           </div>
           <Input id="password" type="password" required defaultValue="password" />
         </div>
         <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-          Login
+          Iniciar Sesión
         </Button>
         <Button variant="outline" className="w-full">
-          Login with Google
+          Iniciar Sesión con Google
         </Button>
       </form>
       <div className="mt-4 text-center text-sm">
-        Don&apos;t have an account?{" "}
+        ¿No tienes una cuenta?{" "}
         <Link href="#" className="underline">
-          Sign up
+          Regístrate
         </Link>
       </div>
     </div>

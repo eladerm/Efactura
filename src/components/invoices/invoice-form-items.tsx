@@ -76,10 +76,10 @@ export function InvoiceFormItems({ onItemsChange }: InvoiceFormItemsProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-2/5">Item</TableHead>
-            <TableHead>Qty</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Discount (%)</TableHead>
+            <TableHead className="w-2/5">Ítem</TableHead>
+            <TableHead>Cant.</TableHead>
+            <TableHead>Precio</TableHead>
+            <TableHead>Descuento (%)</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
@@ -95,7 +95,7 @@ export function InvoiceFormItems({ onItemsChange }: InvoiceFormItemsProps) {
                     onValueChange={(value) => handleItemChange(index, "productId", value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a product" />
+                      <SelectValue placeholder="Selecciona un producto" />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((product) => (
@@ -147,7 +147,7 @@ export function InvoiceFormItems({ onItemsChange }: InvoiceFormItemsProps) {
         </TableBody>
       </Table>
       <Button variant="outline" onClick={handleAddItem}>
-        Add Item
+        Añadir Ítem
       </Button>
     </div>
   )

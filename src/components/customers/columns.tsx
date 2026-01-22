@@ -16,7 +16,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 export const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: 'name',
-    header: 'Name',
+    header: 'Nombre',
     cell: ({ row }) => {
         const customer = row.original;
         return (
@@ -29,15 +29,15 @@ export const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: 'identifier',
-    header: 'Identifier',
+    header: 'Identificador',
   },
   {
     accessorKey: 'email',
-    header: 'Email',
+    header: 'Correo Electrónico',
   },
   {
     accessorKey: 'phone',
-    header: 'Phone',
+    header: 'Teléfono',
   },
   {
     id: 'actions',
@@ -48,20 +48,20 @@ export const columns: ColumnDef<Customer>[] = [
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">Abrir menú</span>
                 <MoreHorizontal className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <Pencil className="mr-2 h-4 w-4" />
-                    Edit
+                    Editar
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    Eliminar
                 </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>

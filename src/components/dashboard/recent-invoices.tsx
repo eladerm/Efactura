@@ -16,11 +16,11 @@ import { cn } from '@/lib/utils';
 import type { InvoiceStatus } from '@/types';
 
 const statusStyles: Record<InvoiceStatus, string> = {
-    Authorized: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400 border-green-300 dark:border-green-700/80',
-    Sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400 border-blue-300 dark:border-blue-700/80',
-    Generated: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-400 border-gray-300 dark:border-gray-700/80',
-    'Not Authorized': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700/80',
-    Cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400 border-red-300 dark:border-red-700/80',
+    Autorizada: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400 border-green-300 dark:border-green-700/80',
+    Enviada: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400 border-blue-300 dark:border-blue-700/80',
+    Generada: 'bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-400 border-gray-300 dark:border-gray-700/80',
+    'No Autorizada': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700/80',
+    Anulada: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400 border-red-300 dark:border-red-700/80',
     Error: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400 border-red-300 dark:border-red-700/80',
 };
 
@@ -31,14 +31,14 @@ export function RecentInvoices() {
     <Card>
       <CardHeader className="flex flex-row items-center">
         <div className="grid gap-2">
-            <CardTitle>Recent Invoices</CardTitle>
+            <CardTitle>Facturas Recientes</CardTitle>
             <CardDescription>
-                A list of the most recently created invoices.
+                Una lista de las facturas creadas más recientemente.
             </CardDescription>
         </div>
         <Button asChild size="sm" className="ml-auto gap-1" variant="outline">
           <Link href="/invoices">
-            View All
+            Ver Todas
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -47,8 +47,8 @@ export function RecentInvoices() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>

@@ -21,34 +21,33 @@ import {
 export default function SettingsPage() {
   return (
     <div>
-      <PageHeader title="Settings" />
+      <PageHeader title="Configuración" />
       <div className="grid gap-6 max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>SRI Configuration</CardTitle>
+            <CardTitle>Configuración SRI</CardTitle>
             <CardDescription>
-              Configure parameters for communication with the SRI. This is only
-              accessible to administrators.
+              Configura los parámetros para la comunicación con el SRI. Solo accesible para administradores.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="sri-environment">Environment</Label>
+              <Label htmlFor="sri-environment">Ambiente</Label>
               <Select defaultValue="test">
                 <SelectTrigger id="sri-environment">
-                  <SelectValue placeholder="Select environment" />
+                  <SelectValue placeholder="Selecciona un ambiente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="test">1 - Pruebas (Test)</SelectItem>
+                  <SelectItem value="test">1 - Pruebas</SelectItem>
                   <SelectItem value="production">
-                    2 - Producción (Production)
+                    2 - Producción
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="establishment">Establishment</Label>
+                <Label htmlFor="establishment">Establecimiento</Label>
                 <Input
                   id="establishment"
                   placeholder="001"
@@ -56,7 +55,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="emission-point">Emission Point</Label>
+                <Label htmlFor="emission-point">Punto de Emisión</Label>
                 <Input
                   id="emission-point"
                   placeholder="001"
@@ -66,29 +65,29 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button>Save Changes</Button>
+            <Button>Guardar Cambios</Button>
           </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Digital Certificate</CardTitle>
+            <CardTitle>Certificado Digital</CardTitle>
             <CardDescription>
-              Upload your .p12 file for signing electronic documents.
+              Sube tu archivo .p12 para firmar documentos electrónicos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="p12-file">.p12 Certificate File</Label>
+              <Label htmlFor="p12-file">Archivo de Certificado .p12</Label>
               <Input id="p12-file" type="file" />
             </div>
              <div className="space-y-2">
-                <Label htmlFor="certificate-password">Certificate Password</Label>
-                <Input id="certificate-password" type="password" placeholder="Enter password"/>
+                <Label htmlFor="certificate-password">Contraseña del Certificado</Label>
+                <Input id="certificate-password" type="password" placeholder="Ingresa la contraseña"/>
               </div>
           </CardContent>
            <CardFooter>
-            <Button>Upload Certificate</Button>
+            <Button>Subir Certificado</Button>
           </CardFooter>
         </Card>
       </div>

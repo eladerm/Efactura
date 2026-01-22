@@ -5,17 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 const chartData = [
-  { month: 'January', revenue: 1860 },
-  { month: 'February', revenue: 3050 },
-  { month: 'March', revenue: 2370 },
-  { month: 'April', revenue: 730 },
-  { month: 'May', revenue: 2090 },
-  { month: 'June', revenue: 2140 },
+  { month: 'Enero', revenue: 1860 },
+  { month: 'Febrero', revenue: 3050 },
+  { month: 'Marzo', revenue: 2370 },
+  { month: 'Abril', revenue: 730 },
+  { month: 'Mayo', revenue: 2090 },
+  { month: 'Junio', revenue: 2140 },
 ];
 
 const chartConfig = {
   revenue: {
-    label: 'Revenue',
+    label: 'Ingresos',
     color: 'hsl(var(--primary))',
   },
 } satisfies ChartConfig
@@ -24,7 +24,7 @@ export function RevenueChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Revenue Overview</CardTitle>
+        <CardTitle>Resumen de Ingresos</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">

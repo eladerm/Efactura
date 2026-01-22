@@ -11,7 +11,7 @@ export default function LoginPage() {
       <div className="hidden bg-muted lg:block relative">
         <Image
           src="https://picsum.photos/seed/efactura/1200/1500"
-          alt="Abstract purple background"
+          alt="Fondo abstracto morado"
           data-ai-hint="abstract purple"
           fill
           className="h-full w-full object-cover dark:brightness-[0.3]"

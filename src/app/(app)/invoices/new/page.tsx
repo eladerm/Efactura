@@ -26,21 +26,21 @@ export default function NewInvoicePage() {
 
   return (
     <div>
-      <PageHeader title="New Invoice" />
+      <PageHeader title="Nueva Factura" />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3 space-y-6">
             {/* Customer Card */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Customer</CardTitle>
-                    <CardDescription>Select the customer for this invoice.</CardDescription>
+                    <CardTitle>Cliente</CardTitle>
+                    <CardDescription>Selecciona el cliente para esta factura.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-2">
-                        <Label htmlFor="customer">Customer</Label>
+                        <Label htmlFor="customer">Cliente</Label>
                         <Select>
                             <SelectTrigger id="customer">
-                            <SelectValue placeholder="Select a customer" />
+                            <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
                             <SelectContent>
                             {customers.map((customer) => (
@@ -57,8 +57,8 @@ export default function NewInvoicePage() {
             {/* Items Card */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Invoice Items</CardTitle>
-                    <CardDescription>Add products or services to the invoice.</CardDescription>
+                    <CardTitle>Ítems de la Factura</CardTitle>
+                    <CardDescription>Añade productos o servicios a la factura.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <InvoiceFormItems onItemsChange={handleItemsChange} />
@@ -69,7 +69,7 @@ export default function NewInvoicePage() {
         <div className="lg:col-span-2">
             <Card className="sticky top-24">
                 <CardHeader>
-                    <CardTitle>Summary</CardTitle>
+                    <CardTitle>Resumen</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex justify-between">
@@ -77,7 +77,7 @@ export default function NewInvoicePage() {
                         <span className="font-mono">${totals.subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                        <span>Taxes (15%)</span>
+                        <span>Impuestos (15%)</span>
                         <span className="font-mono">${totals.tax.toFixed(2)}</span>
                     </div>
                     <Separator />
@@ -87,10 +87,10 @@ export default function NewInvoicePage() {
                     </div>
                     <Separator />
                      <div className="grid gap-2">
-                        <Label htmlFor="payment-method">Payment Method</Label>
+                        <Label htmlFor="payment-method">Método de Pago</Label>
                         <Select defaultValue="cash">
                             <SelectTrigger id="payment-method">
-                                <SelectValue placeholder="Select payment method" />
+                                <SelectValue placeholder="Selecciona un método de pago" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="cash">Sin utilización del sistema financiero</SelectItem>
@@ -103,7 +103,7 @@ export default function NewInvoicePage() {
                 </CardContent>
                 <CardFooter>
                     <Button size="lg" className="w-full bg-accent hover:bg-accent/90">
-                        Create and Issue Invoice
+                        Crear y Emitir Factura
                     </Button>
                 </CardFooter>
             </Card>
