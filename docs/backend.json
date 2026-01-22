@@ -197,6 +197,40 @@
         "certificatePath"
       ]
     },
+    "File": {
+      "title": "File",
+      "type": "object",
+      "description": "Represents a file stored in Firebase Storage.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the file."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the file."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL of the file in Firebase Storage."
+        },
+        "size": {
+          "type": "number",
+          "description": "Size of the file in bytes."
+        },
+        "type": {
+          "type": "string",
+          "description": "MIME type of the file."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "url",
+        "size",
+        "type"
+      ]
+    },
     "DocumentLog": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DocumentLog",

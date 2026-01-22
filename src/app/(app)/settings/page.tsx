@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { FileUpload } from '@/components/storage/file-upload';
 
 export default function SettingsPage() {
   return (
@@ -80,26 +81,11 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Certificado Digital</CardTitle>
             <CardDescription>
-              Configuración del certificado para la firma electrónica de los documentos.
+              Sube tu certificado .p12 para la firma electrónica. El archivo se guardará de forma segura en Firebase Storage.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-              <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Configuración por Variables de Entorno</AlertTitle>
-                <AlertDescription>
-                  <div className="space-y-2">
-                    <p>Para firmar facturas, debes configurar las siguientes variables de entorno en tu proveedor de hosting:</p>
-                    <code className="block w-full whitespace-pre-wrap rounded-md bg-muted p-2 text-xs font-mono">
-                      P12_URL=https://.../tu-certificado.p12<br />
-                      P12_PASSWORD=tu-contraseña
-                    </code>
-                    <p className="text-xs text-muted-foreground">
-                      El sistema actual no permite la subida directa del archivo por seguridad. El archivo debe ser alojado en un lugar seguro (como Firebase Storage) y su URL debe ser proveída.
-                    </p>
-                  </div>
-                </AlertDescription>
-              </Alert>
+              <FileUpload />
           </CardContent>
         </Card>
       </div>
