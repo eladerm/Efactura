@@ -16,16 +16,21 @@ import { customers } from '@/lib/data';
 import type { InvoiceItem } from '@/types';
 import { InvoiceFormItems } from '@/components/invoices/invoice-form-items';
 import { Separator } from '@/components/ui/separator';
+import { createInvoice } from '@/app/actions/invoices';
 
 export default function NewInvoicePage() {
+    const [items, setItems] = useState<InvoiceItem[]>([]);
     const [totals, setTotals] = useState({ subtotal: 0, tax: 0, total: 0 });
+    const [customerId, setCustomerId] = useState<string | undefined>();
+    const [paymentMethod, setPaymentMethod] = useState<string>('cash');
 
-    const handleItemsChange = (_: InvoiceItem[], newTotals: { subtotal: number, tax: number, total: number }) => {
+    const handleItemsChange = (newItems: InvoiceItem[], newTotals: { subtotal: number, tax: number, total: number }) => {
+        setItems(newItems);
         setTotals(newTotals);
     };
 
   return (
-    <div>
+    <form action={createInvoice}>
       <PageHeader title="Nueva Factura" />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-3 space-y-6">
@@ -38,7 +43,7 @@ export default function NewInvoicePage() {
                 <CardContent>
                     <div className="grid gap-2">
                         <Label htmlFor="customer">Cliente</Label>
-                        <Select>
+                        <Select name="customerId" onValueChange={setCustomerId} required>
                             <SelectTrigger id="customer">
                             <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
@@ -72,6 +77,12 @@ export default function NewInvoicePage() {
                     <CardTitle>Resumen</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {/* Hidden inputs for form submission */}
+                    <input type="hidden" name="items" value={JSON.stringify(items.map(i => ({productId: i.product.id, quantity: i.quantity, discount: i.discount})))} />
+                    <input type="hidden" name="subtotal" value={totals.subtotal} />
+                    <input type="hidden" name="tax" value={totals.tax} />
+                    <input type="hidden" name="total" value={totals.total} />
+
                     <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span className="font-mono">${totals.subtotal.toFixed(2)}</span>
@@ -88,7 +99,7 @@ export default function NewInvoicePage() {
                     <Separator />
                      <div className="grid gap-2">
                         <Label htmlFor="payment-method">Método de Pago</Label>
-                        <Select defaultValue="cash">
+                        <Select name="paymentMethod" value={paymentMethod} onValueChange={setPaymentMethod}>
                             <SelectTrigger id="payment-method">
                                 <SelectValue placeholder="Selecciona un método de pago" />
                             </SelectTrigger>
@@ -102,13 +113,13 @@ export default function NewInvoicePage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button size="lg" className="w-full bg-accent hover:bg-accent/90">
+                    <Button type="submit" size="lg" className="w-full bg-accent hover:bg-accent/90" disabled={!customerId || items.length === 0}>
                         Crear y Emitir Factura
                     </Button>
                 </CardFooter>
             </Card>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
