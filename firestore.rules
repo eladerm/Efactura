@@ -1,0 +1,260 @@
+/**
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership security model. All data related to a
+ * user, such as their customer profile, invoices, and logs, is nested under a path
+ * containing their unique user ID (`/customers/{userId}`). Access to this data tree
+ * is granted only to the authenticated owner of that data. A role-based access
+ * control (RBAC) system is included for administrative functions, with placeholder
+ * 'Admin' and 'Facturador' roles.
+ *
+ * Data Structure:
+ * The data is organized hierarchically to reflect ownership. The primary user-centric
+ * collection is `/customers/{userId}`, where `userId` matches the Firebase Auth UID.
+ * All related data, like `/invoices` and `/document_logs`, are subcollections within
+ * this user-specific path. This structure enables simple, performant, path-based
+ * security rules. There are also global collections like `/products_services` for shared
+ * application data and `/sri_configurations` for admin-only settings.
+ *
+ * Key Security Decisions:
+ * - Default Deny: All paths are closed by default. Access must be explicitly granted.
+ * - Strict Ownership: A user can only access data within their own data tree
+ *   (e.g., `/customers/{their-own-userId}/...`).
+ * - No User Enumeration: Listing documents from top-level collections like `/users`
+ *   and `/customers` is disabled to protect user privacy.
+ * - Role-Based Placeholders: Admin-level permissions are controlled by placeholder
+ *   functions (`isAdmin()`, `isFacturador()`). These must be implemented, for example,
+ *   using Firebase Auth custom claims for production use.
+ * - Backend-Managed Collections: Collections like `/sri_authorizations`, which have no
+ *   defined client access patterns, are completely locked down, assuming they will be
+ *   managed exclusively by a trusted backend service.
+ * - Relational Integrity: On document creation, rules validate that parent IDs are
+ *   correctly set in the document data. On update, these IDs are enforced as immutable
+ *   to prevent data from being moved between owners.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =====================================================================
+    // Helper Functions
+    // =====================================================================
+
+    /**
+     * Verifies that a user is signed into the application.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Verifies that the currently authenticated user's UID matches the
+     * provided userId, establishing document ownership.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Verifies ownership for an existing document. Used for update/delete.
+     * CRITICAL: Prevents operations on non-existent documents.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the user has administrative privileges.
+     * TODO: Implement role-based access control, e.g., via custom claims.
+     *       `return request.auth.token.admin == true;`
+     */
+    function isAdmin() {
+      return false;
+    }
+
+    /**
+     * Checks if the user has 'Facturador' (invoicing) privileges.
+     * TODO: Implement role-based access control, e.g., via custom claims.
+     *       `return request.auth.token.role == 'facturador';`
+     */
+    function isFacturador() {
+      return false;
+    }
+
+    /**
+     * Grants access to customer-specific data if the user is the owner,
+     * a 'Facturador', or an 'Admin'.
+     */
+    function canAccessCustomerData(customerId) {
+      return isOwner(customerId) || isFacturador() || isAdmin();
+    }
+    
+    /**
+     * A wrapper for `canAccessCustomerData` that also ensures the document exists
+     * before allowing an update or delete operation.
+     */
+    function isExistingCustomerDataAccessible(customerId) {
+      return canAccessCustomerData(customerId) && resource != null;
+    }
+
+    /**
+     * On create, validates that a document's `id` field matches the
+     * document ID from the path, ensuring self-consistent ownership data.
+     */
+    function hasValidIdOnCreate(docId) {
+      return request.resource.data.id == docId;
+    }
+
+    /**
+     * On update, ensures that the primary `id` field of a document is immutable.
+     * This prevents re-assigning ownership of the document.
+     */
+    function hasImmutableIdOnUpdate() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * On create, validates that a subcollection document contains a field
+     * that correctly references its parent's ID from the path.
+     */
+    function hasValidParentIdOnCreate(key, parentId) {
+      return request.resource.data[key] == parentId;
+    }
+
+    /**
+     * On update, ensures that a document's parent ID reference is immutable,
+     * preventing it from being moved to a different parent.
+     */
+    function hasImmutableParentIdOnUpdate(key) {
+      return request.resource.data[key] == resource.data[key];
+    }
+    
+    // =====================================================================
+    // User Profiles
+    // =====================================================================
+
+    /**
+     * @description Manages user profile documents.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document.
+     * @deny (get) A user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && hasValidIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && hasImmutableIdOnUpdate();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // =====================================================================
+    // Customer & Invoice Data
+    // =====================================================================
+
+    /**
+     * @description Manages customer profile documents, which serve as the root
+     *              for all of that customer's invoicing data.
+     * @path /customers/{customerId}
+     * @allow (create) An authenticated user creating their own customer document.
+     * @deny (list) Any user attempting to list all customers in the system.
+     * @principle Enforces document ownership and prevents user enumeration.
+     */
+    match /customers/{customerId} {
+      allow get: if canAccessCustomerData(customerId);
+      allow list: if false;
+      allow create: if isOwner(customerId) && hasValidIdOnCreate(customerId);
+      allow update: if isExistingCustomerDataAccessible(customerId) && hasImmutableIdOnUpdate();
+      allow delete: if isExistingCustomerDataAccessible(customerId);
+
+      /**
+       * @description Manages the invoices belonging to a specific customer.
+       * @path /customers/{customerId}/invoices/{invoiceId}
+       * @allow (get, list) The customer reading their own invoices.
+       * @deny (create) A user trying to create an invoice for another customer.
+       * @principle Hierarchical security where subcollection access is inherited from the parent path.
+       */
+      match /invoices/{invoiceId} {
+        allow get, list: if canAccessCustomerData(customerId);
+        allow create: if canAccessCustomerData(customerId) && hasValidParentIdOnCreate('customerId', customerId);
+        allow update: if isExistingCustomerDataAccessible(customerId) && hasImmutableParentIdOnUpdate('customerId');
+        allow delete: if isExistingCustomerDataAccessible(customerId);
+
+        /**
+         * @description Manages line items for a specific invoice.
+         * @path /customers/{customerId}/invoices/{invoiceId}/invoice_items/{invoiceItemId}
+         * @allow (get, list) The customer reading items on their own invoice.
+         * @deny (update) A user trying to update items on another customer's invoice.
+         * @principle Hierarchical security where subcollection access is inherited from the parent path.
+         */
+        match /invoice_items/{invoiceItemId} {
+          allow get, list: if canAccessCustomerData(customerId);
+          allow create: if canAccessCustomerData(customerId) && hasValidParentIdOnCreate('invoiceId', invoiceId);
+          allow update: if isExistingCustomerDataAccessible(customerId) && hasImmutableParentIdOnUpdate('invoiceId');
+          allow delete: if isExistingCustomerDataAccessible(customerId);
+        }
+
+        /**
+         * @description Manages document processing logs for a specific invoice.
+         * @path /customers/{customerId}/invoices/{invoiceId}/document_logs/{documentLogId}
+         * @allow (get, list) The customer viewing the logs for their own invoice.
+         * @deny (create) A user creating logs for another customer's invoice.
+         * @principle Hierarchical security where subcollection access is inherited from the parent path.
+         */
+        match /document_logs/{documentLogId} {
+          allow get, list: if canAccessCustomerData(customerId);
+          allow create: if canAccessCustomerData(customerId) && hasValidParentIdOnCreate('invoiceId', invoiceId);
+          allow update: if isExistingCustomerDataAccessible(customerId) && hasImmutableParentIdOnUpdate('invoiceId');
+          allow delete: if isExistingCustomerDataAccessible(customerId);
+        }
+      }
+    }
+
+    // =====================================================================
+    // Global Application Data
+    // =====================================================================
+
+    /**
+     * @description Manages the global catalog of products and services.
+     * @path /products_services/{productServiceId}
+     * @allow (get, list) Any signed-in user can read the product catalog.
+     * @deny (create) A non-admin user trying to add a new product.
+     * @principle Grants public read access to signed-in users, but write access is restricted to Admins.
+     */
+    match /products_services/{productServiceId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Manages SRI (tax authority) configuration. Highly sensitive.
+     * @path /sri_configurations/{sriConfigurationId}
+     * @allow (get) An admin reading the configuration.
+     * @deny (get, list, create, update, delete) Any non-admin user.
+     * @principle Restricts all access to a specific administrative role.
+     */
+    match /sri_configurations/{sriConfigurationId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Stores authorization details from the SRI.
+     *              This data is expected to be written by a backend service.
+     * @path /sri_authorizations/{sriAuthorizationId}
+     * @allow (none) No client-side access is permitted.
+     * @deny (all) All read and write operations from clients are blocked.
+     * @principle Secures data that should only be manipulated by trusted server environments.
+     */
+    match /sri_authorizations/{sriAuthorizationId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

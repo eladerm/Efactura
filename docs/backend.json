@@ -1,0 +1,430 @@
+{
+  "entities": {
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer in the eFactura system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the customer."
+        },
+        "taxId": {
+          "type": "string",
+          "description": "Customer's tax identification number."
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer's name."
+        },
+        "email": {
+          "type": "string",
+          "description": "Customer's email address.",
+          "format": "email"
+        },
+        "address": {
+          "type": "string",
+          "description": "Customer's address."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Customer's phone number."
+        }
+      },
+      "required": [
+        "id",
+        "taxId",
+        "name"
+      ]
+    },
+    "ProductService": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProductService",
+      "type": "object",
+      "description": "Represents a product or service offered.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the product/service."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the product/service."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the product/service."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product/service."
+        },
+        "iva": {
+          "type": "number",
+          "description": "IVA (tax) percentage for the product/service."
+        },
+        "discount": {
+          "type": "number",
+          "description": "Discount percentage for the product/service."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price"
+      ]
+    },
+    "Invoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents an electronic invoice.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the invoice."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N Invoice)"
+        },
+        "invoiceDate": {
+          "type": "string",
+          "description": "Date the invoice was issued.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total amount of the invoice."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method used for the invoice."
+        },
+        "invoiceItems": {
+          "type": "array",
+          "description": "List of items included in the invoice.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sriAuthorization": {
+          "type": "string",
+          "description": "Reference to SriAuthorization. (Relationship: SriAuthorization 1:1 Invoice)"
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "invoiceDate",
+        "totalAmount",
+        "paymentMethod"
+      ]
+    },
+    "InvoiceItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InvoiceItem",
+      "type": "object",
+      "description": "Represents an item in an invoice.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the invoice item."
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Reference to Invoice. (Relationship: Invoice 1:N InvoiceItem)"
+        },
+        "productServiceId": {
+          "type": "string",
+          "description": "Reference to ProductService. (Relationship: ProductService 1:N InvoiceItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the item."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "Unit price of the item."
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "Total price of the item (quantity * unit price)."
+        }
+      },
+      "required": [
+        "id",
+        "invoiceId",
+        "productServiceId",
+        "quantity",
+        "unitPrice",
+        "totalPrice"
+      ]
+    },
+    "SriConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SriConfiguration",
+      "type": "object",
+      "description": "Stores the configuration parameters for SRI integration.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SRI configuration."
+        },
+        "environment": {
+          "type": "string",
+          "description": "SRI environment (TEST or PROD)."
+        },
+        "defaultEstablishment": {
+          "type": "string",
+          "description": "Default establishment code."
+        },
+        "defaultPointOfEmission": {
+          "type": "string",
+          "description": "Default point of emission code."
+        },
+        "certificatePath": {
+          "type": "string",
+          "description": "Path to the .p12 certificate file in Cloud Storage."
+        }
+      },
+      "required": [
+        "id",
+        "environment",
+        "defaultEstablishment",
+        "defaultPointOfEmission",
+        "certificatePath"
+      ]
+    },
+    "DocumentLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DocumentLog",
+      "type": "object",
+      "description": "Keeps track of document processing status and logs.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the document log."
+        },
+        "invoiceId": {
+          "type": "string",
+          "description": "Reference to Invoice. (Relationship: Invoice 1:N DocumentLog)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of the log entry.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the document (e.g., created, signed, sent, authorized, failed)."
+        },
+        "message": {
+          "type": "string",
+          "description": "Log message describing the event."
+        }
+      },
+      "required": [
+        "id",
+        "invoiceId",
+        "timestamp",
+        "status",
+        "message"
+      ]
+    },
+    "SriAuthorization": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SriAuthorization",
+      "type": "object",
+      "description": "Stores the authorization details received from SRI.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the authorization."
+        },
+        "authorizationNumber": {
+          "type": "string",
+          "description": "Authorization number provided by SRI."
+        },
+        "authorizationDate": {
+          "type": "string",
+          "description": "Date and time of the authorization.",
+          "format": "date-time"
+        },
+        "xmlFileName": {
+          "type": "string",
+          "description": "File name of the XML in cloud storage"
+        },
+        "pdfFileName": {
+          "type": "string",
+          "description": "File name of the RIDE PDF in cloud storage"
+        }
+      },
+      "required": [
+        "id",
+        "authorizationNumber",
+        "authorizationDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "user",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores user-specific data.  The `userId` parameter corresponds to the Firebase Auth UID. Path-based ownership for user data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer information. Accessible with 'Facturador' and 'Admin' roles.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}/invoices/{invoiceId}",
+        "definition": {
+          "entityName": "Invoice",
+          "schema": {
+            "$ref": "#/backend/entities/Invoice"
+          },
+          "description": "Stores invoices associated with a specific customer. Uses hierarchical path to represent the 1:N relationship. Accessible by the 'Facturador' role.  customerId must match the uid.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            },
+            {
+              "name": "invoiceId",
+              "description": "Unique identifier for the invoice."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}/invoices/{invoiceId}/invoice_items/{invoiceItemId}",
+        "definition": {
+          "entityName": "InvoiceItem",
+          "schema": {
+            "$ref": "#/backend/entities/InvoiceItem"
+          },
+          "description": "Stores invoice items for a specific invoice.  Hierarchical path for representing the 1:N relationship.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            },
+            {
+              "name": "invoiceId",
+              "description": "Unique identifier for the invoice."
+            },
+            {
+              "name": "invoiceItemId",
+              "description": "Unique identifier for the invoice item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products_services/{productServiceId}",
+        "definition": {
+          "entityName": "ProductService",
+          "schema": {
+            "$ref": "#/backend/entities/ProductService"
+          },
+          "description": "Stores product and service information.",
+          "params": [
+            {
+              "name": "productServiceId",
+              "description": "Unique identifier for the product or service."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sri_configurations/{sriConfigurationId}",
+        "definition": {
+          "entityName": "SriConfiguration",
+          "schema": {
+            "$ref": "#/backend/entities/SriConfiguration"
+          },
+          "description": "Stores SRI configuration parameters. Restricted to 'Admin' role.",
+          "params": [
+            {
+              "name": "sriConfigurationId",
+              "description": "Unique identifier for the SRI configuration."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}/invoices/{invoiceId}/document_logs/{documentLogId}",
+        "definition": {
+          "entityName": "DocumentLog",
+          "schema": {
+            "$ref": "#/backend/entities/DocumentLog"
+          },
+          "description": "Stores document processing logs for a specific invoice.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            },
+            {
+              "name": "invoiceId",
+              "description": "Unique identifier for the invoice."
+            },
+            {
+              "name": "documentLogId",
+              "description": "Unique identifier for the document log."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/sri_authorizations/{sriAuthorizationId}",
+        "definition": {
+          "entityName": "SriAuthorization",
+          "schema": {
+            "$ref": "#/backend/entities/SriAuthorization"
+          },
+          "description": "Stores authorization details received from SRI.",
+          "params": [
+            {
+              "name": "sriAuthorizationId",
+              "description": "Unique identifier for the authorization."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure and scalable solution for the eFactura application, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-based Access Control), and QAPs (Rules are not Filters). It leverages Structural Segregation (Homogeneous Security Posture), Access Modeling (Standardization and Consistency), and Data Clarity and Predictability.\n\n**Authorization Independence:** Authorization independence is achieved via path-based ownership and denormalization. User-specific data is nested under `/users/{userId}`.  Collaborative data uses membership maps within the documents themselves, avoiding `get()` calls in security rules. For instance, Invoice documents are located under `customers/{customerId}/invoices/{invoiceId}`. This provides clear ownership and avoids the need for complex rule logic that depends on parent documents.\n\n**Structural Segregation:** The structure segregates different types of data into separate collections based on their access requirements. This ensures a homogeneous security posture for each collection. For example, User profile data is kept separate from Invoices, and both are separated from SRI configurations that only Admins should access.\n\n**Access Modeling:** The design uses consistent access patterns. Private user data is stored under the `/users/{userId}` path. Relationships such as `Customer 1:N Invoice` are modeled with hierarchical paths (`/customers/{customerId}/invoices/{invoiceId}`). This enables straightforward security rules based on path ownership.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations by avoiding the need to filter based on data content in rules. Path-based ownership allows listing only the documents a user owns or has access to, preventing unauthorized data exposure.\n\n**Example Scenario**:\nConsider the Invoices. Each invoice document is stored under a specific customer document in the `customers/{customerId}/invoices/{invoiceId}` path. The security rules can easily check if `request.auth.uid == customerId` to grant access to the invoice. Similarly for DocumentLogs, path based hierarchy allows secure access by the owner only."
+  }
+}
