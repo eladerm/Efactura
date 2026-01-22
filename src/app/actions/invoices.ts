@@ -1,8 +1,15 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { generateInvoice, generateInvoiceXml } from 'open-factura';
-import type { InvoiceItem, Customer, Product } from '@/types';
+import {
+  generateInvoice,
+  generateInvoiceXml,
+  getP12FromUrl,
+  signXml,
+  documentReception,
+  documentAuthorization,
+} from 'open-factura';
+import type { Customer, Product } from '@/types';
 import { customers, products } from '@/lib/data';
 import { format } from 'date-fns';
 
@@ -125,25 +132,74 @@ export async function createInvoice(formData: FormData) {
     })
   };
 
+  // Choose SRI endpoints based on environment (default to 'test')
+  const sriEnvironment = process.env.SRI_ENVIRONMENT || 'test'; // 'test' or 'production'
+  const receptionUrl = sriEnvironment === 'production' 
+    ? 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl'
+    : 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+  const authorizationUrl = sriEnvironment === 'production'
+    ? 'https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl'
+    : 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+
 
   try {
+    // 1. Generate Invoice object and access key
     const { invoice, accessKey } = generateInvoice({
-      infoTributaria,
+      infoTributaria: {
+          ...infoTributaria,
+          ambiente: sriEnvironment === 'production' ? '2' : '1',
+      },
       infoFactura,
-      detalles: detalles,
+      detalles,
     });
 
+    // 2. Generate XML
     const invoiceXml = generateInvoiceXml(invoice);
-    console.log("Clave de Acceso:", accessKey);
-    console.log("XML Generado:", invoiceXml);
+    console.log("Clave de Acceso Generada:", accessKey);
+    
+    // 3. Sign XML
+    // IMPORTANT: These must be set as environment variables in your hosting provider
+    const p12Url = process.env.P12_URL; 
+    const p12Password = process.env.P12_PASSWORD;
 
-    // TODO: Sign and send to SRI
+    if (!p12Url || !p12Password) {
+      // We will log and skip signing for now if variables are not set.
+      // In a real scenario you would throw an error.
+      console.log("Skipping signing and sending to SRI. Set P12_URL and P12_PASSWORD env variables.");
+      // redirect('/invoices'); // Redirect without sending
+      // return;
+      throw new Error("Missing P12_URL or P12_PASSWORD environment variables. Please configure them to sign the invoice.");
+    }
+
+    const p12Buffer = await getP12FromUrl(p12Url);
+    const signedXml = await signXml(p12Buffer, p12Password, invoiceXml);
+    console.log("XML Firmado con éxito.");
+
+    // 4. Send to SRI for reception
+    const receptionResult = await documentReception(signedXml, receptionUrl);
+    console.log("Resultado de Recepción SRI:", receptionResult);
+
+    if (receptionResult.estado !== 'RECIBIDA') {
+        console.error("Error en la recepción del SRI:", receptionResult);
+        throw new Error(`El SRI no recibió la factura. Estado: ${receptionResult.estado}`);
+    }
+    
+    console.log("Factura RECIBIDA por el SRI.");
+
+    // 5. Authorize document. This can take a few seconds.
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before authorizing
+
+    const authorizationResult = await documentAuthorization(accessKey, authorizationUrl);
+    console.log("Resultado de Autorización SRI:", authorizationResult);
+
+    // TODO: Process authorizationResult and save the final status and data to your database.
 
   } catch (error) {
-    console.error("Error al generar la factura:", error);
-    // TODO: Handle error, maybe return a message to the user
-    return;
+    console.error("Error en el proceso de facturación:", error);
+    // TODO: Handle error in the UI, maybe return a message to the user or save invoice with 'Error' status
+    throw error;
   }
 
+  // If successful, redirect to invoices page
   redirect('/invoices');
 }
