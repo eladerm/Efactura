@@ -3,10 +3,27 @@ import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { RevenueChart } from '@/components/dashboard/revenue-chart';
 import { RecentInvoices } from '@/components/dashboard/recent-invoices';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 export default function DashboardPage() {
+  const isSignatureConfigured = !!(process.env.P12_URL && process.env.P12_PASSWORD);
+
   return (
     <div>
+      {!isSignatureConfigured && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Configuración de Firma Incompleta</AlertTitle>
+          <AlertDescription>
+            Para emitir facturas, es necesario configurar tu certificado digital.
+            Asegúrate de que las variables de entorno `P12_URL` y `P12_PASSWORD` estén configuradas.
+            <Link href="/settings" className="font-bold underline ml-1">
+              Ir a Configuración para más detalles.
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
       <PageHeader title="Tablero" />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <StatCard

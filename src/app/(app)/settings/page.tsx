@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 export default function SettingsPage() {
   return (
@@ -44,6 +46,9 @@ export default function SettingsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground pt-1">
+                Actualmente, el ambiente se controla a través de la variable de entorno `SRI_ENVIRONMENT`.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -52,6 +57,7 @@ export default function SettingsPage() {
                   id="establishment"
                   placeholder="001"
                   defaultValue="001"
+                  readOnly
                 />
               </div>
               <div className="space-y-2">
@@ -60,12 +66,13 @@ export default function SettingsPage() {
                   id="emission-point"
                   placeholder="001"
                   defaultValue="001"
+                  readOnly
                 />
               </div>
             </div>
           </CardContent>
           <CardFooter>
-            <Button>Guardar Cambios</Button>
+            <Button disabled>Guardar Cambios</Button>
           </CardFooter>
         </Card>
 
@@ -73,22 +80,27 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Certificado Digital</CardTitle>
             <CardDescription>
-              Sube tu archivo .p12 para firmar documentos electrónicos.
+              Configuración del certificado para la firma electrónica de los documentos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="p12-file">Archivo de Certificado .p12</Label>
-              <Input id="p12-file" type="file" />
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="certificate-password">Contraseña del Certificado</Label>
-                <Input id="certificate-password" type="password" placeholder="Ingresa la contraseña"/>
-              </div>
+              <Alert>
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Configuración por Variables de Entorno</AlertTitle>
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <p>Para firmar facturas, debes configurar las siguientes variables de entorno en tu proveedor de hosting:</p>
+                    <code className="block w-full whitespace-pre-wrap rounded-md bg-muted p-2 text-xs font-mono">
+                      P12_URL=https://.../tu-certificado.p12<br />
+                      P12_PASSWORD=tu-contraseña
+                    </code>
+                    <p className="text-xs text-muted-foreground">
+                      El sistema actual no permite la subida directa del archivo por seguridad. El archivo debe ser alojado en un lugar seguro (como Firebase Storage) y su URL debe ser proveída.
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
           </CardContent>
-           <CardFooter>
-            <Button>Subir Certificado</Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
