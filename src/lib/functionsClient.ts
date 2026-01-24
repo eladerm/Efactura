@@ -1,7 +1,7 @@
 
 'use client';
 
-const BASE_URL = "https://us-central1-studio-1175223924-55e17.cloudfunctions.net";
+const BASE_URL = "https://us-central1-studio-1175223924-14ab3.cloudfunctions.net";
 const MAX_RETRIES = 3;
 const INITIAL_DELAY = 500; // ms
 
