@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
@@ -24,10 +24,10 @@ export default function NewInvoicePage() {
     const [customerId, setCustomerId] = useState<string | undefined>();
     const [paymentMethod, setPaymentMethod] = useState<string>('cash');
 
-    const handleItemsChange = (newItems: InvoiceItem[], newTotals: { subtotal: number, tax: number, total: number }) => {
+    const handleItemsChange = useCallback((newItems: InvoiceItem[], newTotals: { subtotal: number, tax: number, total: number }) => {
         setItems(newItems);
         setTotals(newTotals);
-    };
+    }, []);
 
   return (
     <form action={createInvoice}>
