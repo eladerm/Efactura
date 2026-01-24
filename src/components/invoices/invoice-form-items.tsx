@@ -137,6 +137,7 @@ export function InvoiceFormItems({ onItemsChange }: InvoiceFormItemsProps) {
                     size="icon"
                     onClick={() => handleRemoveItem(index)}
                     disabled={items.length <= 1}
+                    type="button"
                   >
                     <Trash2 className="h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -146,7 +147,7 @@ export function InvoiceFormItems({ onItemsChange }: InvoiceFormItemsProps) {
           })}
         </TableBody>
       </Table>
-      <Button variant="outline" onClick={handleAddItem}>
+      <Button type="button" variant="outline" onClick={handleAddItem}>
         Añadir Ítem
       </Button>
     </div>

@@ -13,21 +13,30 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { customers } from '@/lib/data';
-import type { InvoiceItem } from '@/types';
+import type { InvoiceItem, Customer } from '@/types';
 import { InvoiceFormItems } from '@/components/invoices/invoice-form-items';
 import { Separator } from '@/components/ui/separator';
 import { createInvoice } from '@/app/actions/invoices';
+import { Mail, MapPin } from 'lucide-react';
 
 export default function NewInvoicePage() {
     const [items, setItems] = useState<InvoiceItem[]>([]);
     const [totals, setTotals] = useState({ subtotal: 0, tax: 0, total: 0 });
     const [customerId, setCustomerId] = useState<string | undefined>();
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>();
     const [paymentMethod, setPaymentMethod] = useState<string>('cash');
 
     const handleItemsChange = useCallback((newItems: InvoiceItem[], newTotals: { subtotal: number, tax: number, total: number }) => {
         setItems(newItems);
         setTotals(newTotals);
     }, []);
+
+    const handleCustomerChange = (value: string) => {
+        setCustomerId(value);
+        const customer = customers.find(c => c.id === value);
+        setSelectedCustomer(customer);
+    };
+
 
   return (
     <form action={createInvoice}>
@@ -40,10 +49,10 @@ export default function NewInvoicePage() {
                     <CardTitle>Cliente</CardTitle>
                     <CardDescription>Selecciona el cliente para esta factura.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <div className="grid gap-2">
                         <Label htmlFor="customer">Cliente</Label>
-                        <Select name="customerId" onValueChange={setCustomerId} required>
+                        <Select name="customerId" onValueChange={handleCustomerChange} required>
                             <SelectTrigger id="customer">
                             <SelectValue placeholder="Selecciona un cliente" />
                             </SelectTrigger>
@@ -56,6 +65,18 @@ export default function NewInvoicePage() {
                             </SelectContent>
                         </Select>
                     </div>
+                     {selectedCustomer && (
+                        <div className="grid gap-3 pt-4 text-sm text-muted-foreground border-t">
+                            <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>{selectedCustomer.address}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4" />
+                                <span>{selectedCustomer.email}</span>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
