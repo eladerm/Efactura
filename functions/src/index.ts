@@ -1,21 +1,12 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import * as cors from "cors";
 
-/**
- * Ping básico.
- *
- * @return {void}
- */
-export const ping = onRequest((_req, res) => {
-  res.json({ok: true});
-});
+// Inicializa el middleware de CORS para permitir peticiones desde cualquier origen.
+const corsHandler = cors({origin: true});
 
 /**
  * Pad con ceros a la izquierda.
- *
- * @param {string|number} val Valor
- * @param {number} len Longitud
- * @return {string} String con ceros
  */
 function zpad(val: string | number, len: number): string {
   return String(val).padStart(len, "0");
@@ -23,17 +14,6 @@ function zpad(val: string | number, len: number): string {
 
 /**
  * Genera clave de acceso SRI (49 dígitos) para FACTURA (codDoc 01).
- *
- * @param {string} fecha Fecha ddmmyyyy
- * @param {string} codDoc Código documento (01)
- * @param {string} ruc RUC emisor
- * @param {string} ambiente 1 pruebas / 2 producción
- * @param {string} estab Establecimiento 3 dígitos
- * @param {string} ptoEmi Punto emisión 3 dígitos
- * @param {string} secuencial Secuencial 9 dígitos
- * @param {string} codigoNum Código numérico 8 dígitos
- * @param {string} tipoEmision 1 normal
- * @return {string} Clave de acceso (49)
  */
 function buildClaveAcceso(
   fecha: string,
@@ -73,131 +53,192 @@ function buildClaveAcceso(
   return base + String(dig);
 }
 
-/**
- * Genera XML de factura v2.26 (estructura mínima válida) con claveAcceso.
- *
- * @return {void}
- */
-export const buildInvoiceXml = onRequest((req, res) => {
-  try {
-    const razonSocial = "ELAPIEL";
-    const nombreComercial = "ELAPIEL";
-    const ruc = "1725885485001";
-    const obligadoContabilidad = "NO";
 
-    const ambiente = "1";
-    const tipoEmision = "1";
-    const codDoc = "01";
+// --- FUNCIONES DE PRUEBA ---
 
-    const estab = "001";
-    const ptoEmi = "001";
-    const secuencial = zpad(1, 9);
+// 1. ping: Verifica conectividad básica con el backend.
+export const ping = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    logger.info("ping ok");
+    res.json({ok: true, message: "El backend de funciones está respondiendo."});
+  });
+});
 
-    const now = new Date();
-    const dd = zpad(now.getDate(), 2);
-    const mm = zpad(now.getMonth() + 1, 2);
-    const yyyy = String(now.getFullYear());
+// 2. sriPing: Simula una conexión con los servicios del SRI.
+export const sriPing = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    logger.info("sriPing mock ok");
+    res.json({ok: true, message: "Conexión simulada con SRI exitosa (WSDL de recepción y autorización).", environment: "pruebas"});
+  });
+});
 
-    const fechaEmision = `${dd}/${mm}/${yyyy}`;
-    const fechaClave = `${dd}${mm}${yyyy}`;
+// 3. checkP12: Simula la lectura del certificado desde GCS.
+export const checkP12 = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    logger.info("checkP12 mock ok");
+    res.json({ok: true, message: "Simulación: Certificado P12 encontrado y leído desde Cloud Storage."});
+  });
+});
 
-    const codigoNumerico = "12345678";
+// 4. testP12Secret: Simula la lectura de la contraseña desde Secret Manager.
+export const testP12Secret = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    logger.info("testP12Secret mock ok");
+    res.json({ok: true, message: "Simulación: Secreto de la contraseña del P12 leído desde Secret Manager."});
+  });
+});
 
-    const claveAcceso = buildClaveAcceso(
-      fechaClave,
-      codDoc,
-      ruc,
-      ambiente,
-      estab,
-      ptoEmi,
-      secuencial,
-      codigoNumerico,
-      tipoEmision,
-    );
+// 5. signXmlTest: Simula la firma de un XML de prueba.
+export const signXmlTest = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    logger.info("signXmlTest mock ok");
+    res.json({ok: true, message: "Simulación: XML de prueba firmado correctamente."});
+  });
+});
 
-    const compradorNombre =
-      typeof req.body?.compradorNombre === "string" ?
-        req.body.compradorNombre :
-        "CONSUMIDOR FINAL";
-
-    const compradorDoc =
-      typeof req.body?.compradorDoc === "string" ?
-        req.body.compradorDoc :
-        "9999999999999";
-
-    const compradorTipoId =
-      compradorDoc === "9999999999999" ? "07" : "05";
-
-    const xml =
-      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-      "<factura id=\"comprobante\" version=\"1.0.0\">" +
-      "<infoTributaria>" +
-      `<ambiente>${ambiente}</ambiente>` +
-      `<tipoEmision>${tipoEmision}</tipoEmision>` +
-      `<razonSocial>${razonSocial}</razonSocial>` +
-      `<nombreComercial>${nombreComercial}</nombreComercial>` +
-      `<ruc>${ruc}</ruc>` +
-      `<claveAcceso>${claveAcceso}</claveAcceso>` +
-      `<codDoc>${codDoc}</codDoc>` +
-      `<estab>${estab}</estab>` +
-      `<ptoEmi>${ptoEmi}</ptoEmi>` +
-      `<secuencial>${secuencial}</secuencial>` +
-      "<dirMatriz>Quito</dirMatriz>" +
-      "</infoTributaria>" +
-      "<infoFactura>" +
-      `<fechaEmision>${fechaEmision}</fechaEmision>` +
-      "<dirEstablecimiento>Quito</dirEstablecimiento>" +
-      `<obligadoContabilidad>${obligadoContabilidad}</obligadoContabilidad>` +
-      "<tipoIdentificacionComprador>" +
-      `${compradorTipoId}</tipoIdentificacionComprador>` +
-      `<razonSocialComprador>${compradorNombre}</razonSocialComprador>` +
-      `<identificacionComprador>${compradorDoc}</identificacionComprador>` +
-      "<totalSinImpuestos>10.00</totalSinImpuestos>" +
-      "<totalDescuento>0.00</totalDescuento>" +
-      "<totalConImpuestos>" +
-      "<totalImpuesto>" +
-      "<codigo>2</codigo>" +
-      "<codigoPorcentaje>0</codigoPorcentaje>" +
-      "<baseImponible>10.00</baseImponible>" +
-      "<valor>0.00</valor>" +
-      "</totalImpuesto>" +
-      "</totalConImpuestos>" +
-      "<propina>0.00</propina>" +
-      "<importeTotal>10.00</importeTotal>" +
-      "<moneda>DOLAR</moneda>" +
-      "</infoFactura>" +
-      "<detalles>" +
-      "<detalle>" +
-      "<codigoPrincipal>SERV001</codigoPrincipal>" +
-      "<descripcion>SERVICIO</descripcion>" +
-      "<cantidad>1.00</cantidad>" +
-      "<precioUnitario>10.00</precioUnitario>" +
-      "<descuento>0.00</descuento>" +
-      "<precioTotalSinImpuesto>10.00</precioTotalSinImpuesto>" +
-      "<impuestos>" +
-      "<impuesto>" +
-      "<codigo>2</codigo>" +
-      "<codigoPorcentaje>0</codigoPorcentaje>" +
-      "<tarifa>0</tarifa>" +
-      "<baseImponible>10.00</baseImponible>" +
-      "<valor>0.00</valor>" +
-      "</impuesto>" +
-      "</impuestos>" +
-      "</detalle>" +
-      "</detalles>" +
-      "</factura>";
-
+// 6. sriSendTest: Simula el envío de un comprobante al SRI.
+export const sriSendTest = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+    logger.info("sriSendTest mock ok", req.body);
     res.json({
       ok: true,
-      claveAcceso,
-      xml,
-      xmlB64: Buffer.from(xml, "utf8").toString("base64"),
+      sri_response: {
+        estado: "RECIBIDA",
+        comprobantes: {
+          comprobante: {
+            claveAcceso: "1234567890123456789012345678901234567890123456789",
+            mensajes: {},
+          },
+        },
+      },
     });
-  } catch (e: unknown) {
-    logger.error("buildInvoiceXml error", e);
-    res.status(500).json({
-      ok: false,
-      error: e instanceof Error ? e.message : "Error",
-    });
-  }
+  });
+});
+
+// 7. buildInvoiceXml: Genera un XML de factura con datos de prueba.
+export const buildInvoiceXml = onRequest((req, res) => {
+  corsHandler(req, res, () => {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+    try {
+      const razonSocial = "ELAPIEL";
+      const nombreComercial = "ELAPIEL";
+      const ruc = "1725885485001";
+      const obligadoContabilidad = "NO";
+      const ambiente = "1"; // Pruebas
+      const tipoEmision = "1";
+      const codDoc = "01";
+      const estab = "001";
+      const ptoEmi = "001";
+      const secuencial = zpad(Math.floor(Math.random() * 999999999), 9);
+      const now = new Date();
+      const dd = zpad(now.getDate(), 2);
+      const mm = zpad(now.getMonth() + 1, 2);
+      const yyyy = String(now.getFullYear());
+      const fechaEmision = `${dd}/${mm}/${yyyy}`;
+      const fechaClave = `${dd}${mm}${yyyy}`;
+      const codigoNumerico = "12345678";
+
+      const claveAcceso = buildClaveAcceso(
+        fechaClave,
+        codDoc,
+        ruc,
+        ambiente,
+        estab,
+        ptoEmi,
+        secuencial,
+        codigoNumerico,
+        tipoEmision,
+      );
+
+      const compradorNombre =
+        typeof req.body?.compradorNombre === "string" ?
+          req.body.compradorNombre :
+          "CONSUMIDOR FINAL";
+
+      const compradorDoc =
+        typeof req.body?.compradorDoc === "string" ?
+          req.body.compradorDoc :
+          "9999999999999";
+
+      const compradorTipoId =
+        compradorDoc === "9999999999999" ? "07" : (compradorDoc.length === 13 ? "04" : "05");
+
+      const xml =
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+        "<factura id=\"comprobante\" version=\"1.0.0\">" +
+        "<infoTributaria>" +
+        `<ambiente>${ambiente}</ambiente>` +
+        `<tipoEmision>${tipoEmision}</tipoEmision>` +
+        `<razonSocial>${razonSocial}</razonSocial>` +
+        `<nombreComercial>${nombreComercial}</nombreComercial>` +
+        `<ruc>${ruc}</ruc>` +
+        `<claveAcceso>${claveAcceso}</claveAcceso>` +
+        `<codDoc>${codDoc}</codDoc>` +
+        `<estab>${estab}</estab>` +
+        `<ptoEmi>${ptoEmi}</ptoEmi>` +
+        `<secuencial>${secuencial}</secuencial>` +
+        "<dirMatriz>Quito</dirMatriz>" +
+        "</infoTributaria>" +
+        "<infoFactura>" +
+        `<fechaEmision>${fechaEmision}</fechaEmision>` +
+        "<dirEstablecimiento>Quito</dirEstablecimiento>" +
+        `<obligadoContabilidad>${obligadoContabilidad}</obligadoContabilidad>` +
+        `<tipoIdentificacionComprador>${compradorTipoId}</tipoIdentificacionComprador>` +
+        `<razonSocialComprador>${compradorNombre}</razonSocialComprador>` +
+        `<identificacionComprador>${compradorDoc}</identificacionComprador>` +
+        "<totalSinImpuestos>10.00</totalSinImpuestos>" +
+        "<totalDescuento>0.00</totalDescuento>" +
+        "<totalConImpuestos>" +
+        "<totalImpuesto>" +
+        "<codigo>2</codigo>" +
+        "<codigoPorcentaje>0</codigoPorcentaje>" +
+        "<baseImponible>10.00</baseImponible>" +
+        "<valor>0.00</valor>" +
+        "</totalImpuesto>" +
+        "</totalConImpuestos>" +
+        "<propina>0.00</propina>" +
+        "<importeTotal>10.00</importeTotal>" +
+        "<moneda>DOLAR</moneda>" +
+        "</infoFactura>" +
+        "<detalles>" +
+        "<detalle>" +
+        "<codigoPrincipal>SERV001</codigoPrincipal>" +
+        "<descripcion>SERVICIO DE PRUEBA</descripcion>" +
+        "<cantidad>1.00</cantidad>" +
+        "<precioUnitario>10.00</precioUnitario>" +
+        "<descuento>0.00</descuento>" +
+        "<precioTotalSinImpuesto>10.00</precioTotalSinImpuesto>" +
+        "<impuestos>" +
+        "<impuesto>" +
+        "<codigo>2</codigo>" +
+        "<codigoPorcentaje>0</codigoPorcentaje>" +
+        "<tarifa>0</tarifa>" +
+        "<baseImponible>10.00</baseImponible>" +
+        "<valor>0.00</valor>" +
+        "</impuesto>" +
+        "</impuestos>" +
+        "</detalle>" +
+        "</detalles>" +
+        "</factura>";
+
+      res.json({
+        ok: true,
+        claveAcceso,
+        xmlB64: Buffer.from(xml, "utf8").toString("base64"),
+      });
+    } catch (e: unknown) {
+      logger.error("buildInvoiceXml error", e);
+      res.status(500).json({
+        ok: false,
+        error: e instanceof Error ? e.message : "Error",
+      });
+    }
+  });
 });
