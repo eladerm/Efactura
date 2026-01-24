@@ -32,3 +32,24 @@ export type Invoice = {
   status: InvoiceStatus;
   items: InvoiceItem[];
 };
+
+export type TestName = 
+  | "ping"
+  | "checkP12"
+  | "testP12Secret"
+  | "buildInvoiceXml"
+  | "signXmlTest"
+  | "sriPing"
+  | "sriSendTest"
+  | "fullFlow";
+
+export type TestStatus = "idle" | "running" | "success" | "error";
+
+export interface TestExecution {
+  id: string;
+  name: TestName;
+  status: TestStatus;
+  timestamp: string;
+  result: any;
+  duration: number;
+}

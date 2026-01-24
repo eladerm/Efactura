@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   LogOut,
   ChevronDown,
+  FlaskConical,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { Header } from '@/components/header';
@@ -38,6 +39,7 @@ const navItems = [
   { href: '/invoices', icon: FileText, label: 'Facturas' },
   { href: '/customers', icon: Users, label: 'Clientes' },
   { href: '/products', icon: Package, label: 'Productos' },
+  { href: '/dashboard/pruebas', icon: FlaskConical, label: 'Pruebas SRI' },
   { href: '/settings', icon: Settings, label: 'Configuración' },
 ];
 
