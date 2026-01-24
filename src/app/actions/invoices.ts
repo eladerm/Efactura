@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -9,22 +10,22 @@ import {
   documentReception,
   documentAuthorization,
 } from 'open-factura';
-import type { Customer, Product } from '@/types';
-import { customers, products } from '@/lib/data';
+import type { Cliente, Producto } from '@/types';
+import { clientes, productos } from '@/lib/data';
 import { format } from 'date-fns';
 
 // Helper function to find a customer by ID
-const getCustomer = (id: string): Customer | undefined => customers.find(c => c.id === id);
+const getCustomer = (id: string): Cliente | undefined => clientes.find(c => c.id === id);
 
 // Helper function to find a product by ID
-const getProduct = (id:string): Product | undefined => products.find(p => p.id === id);
+const getProduct = (id:string): Producto | undefined => productos.find(p => p.id === id);
 
 const getFormaPago = (method: string): string => {
     switch (method) {
-        case 'cash': return '01';
-        case 'card': return '19';
-        case 'transfer': return '20';
-        case 'other': return '20';
+        case 'efectivo': return '01';
+        case 'tarjeta': return '19';
+        case 'transferencia': return '20';
+        case 'otros': return '20';
         default: return '01';
     }
 }
@@ -66,9 +67,9 @@ export async function createInvoice(formData: FormData) {
     fechaEmision: format(today, 'dd/MM/yyyy'),
     dirEstablecimiento: "AV. 9 DE OCTUBRE Y MALECON, GUAYAQUIL",
     obligadoContabilidad: "SI",
-    tipoIdentificacionComprador: customer.identifier.length === 13 ? '04' : (customer.identifier.length === 10 ? '05' : '07'),
+    tipoIdentificacionComprador: customer.identificador.length === 13 ? '04' : (customer.identificador.length === 10 ? '05' : '07'),
     razonSocialComprador: customer.name,
-    identificacionComprador: customer.identifier,
+    identificacionComprador: customer.identificador,
     direccionComprador: customer.address,
     totalSinImpuestos: subtotal,
     totalDescuento: items.reduce((acc, item) => {
@@ -164,35 +165,31 @@ export async function createInvoice(formData: FormData) {
 
     if (!p12Url || !p12Password) {
       // We will log and skip signing for now if variables are not set.
-      // In a real scenario you would throw an error.
-      console.log("Skipping signing and sending to SRI. Set P12_URL and P12_PASSWORD env variables.");
-      // redirect('/invoices'); // Redirect without sending
-      // return;
-      throw new Error("Missing P12_URL or P12_PASSWORD environment variables. Please configure them to sign the invoice.");
+      console.warn("ADVERTENCIA: No se configuraron las variables P12_URL y P12_PASSWORD. La factura fue generada pero no será firmada ni enviada al SRI.");
+    } else {
+        const p12Buffer = await getP12FromUrl(p12Url);
+        const signedXml = await signXml(p12Buffer, p12Password, invoiceXml);
+        console.log("XML Firmado con éxito.");
+
+        // 4. Send to SRI for reception
+        const receptionResult = await documentReception(signedXml, receptionUrl);
+        console.log("Resultado de Recepción SRI:", receptionResult);
+
+        if (receptionResult.estado !== 'RECIBIDA') {
+            console.error("Error en la recepción del SRI:", receptionResult);
+            throw new Error(`El SRI no recibió la factura. Estado: ${receptionResult.estado}`);
+        }
+        
+        console.log("Factura RECIBIDA por el SRI.");
+
+        // 5. Authorize document. This can take a few seconds.
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before authorizing
+
+        const authorizationResult = await documentAuthorization(accessKey, authorizationUrl);
+        console.log("Resultado de Autorización SRI:", authorizationResult);
+
+        // TODO: Process authorizationResult and save the final status and data to your database.
     }
-
-    const p12Buffer = await getP12FromUrl(p12Url);
-    const signedXml = await signXml(p12Buffer, p12Password, invoiceXml);
-    console.log("XML Firmado con éxito.");
-
-    // 4. Send to SRI for reception
-    const receptionResult = await documentReception(signedXml, receptionUrl);
-    console.log("Resultado de Recepción SRI:", receptionResult);
-
-    if (receptionResult.estado !== 'RECIBIDA') {
-        console.error("Error en la recepción del SRI:", receptionResult);
-        throw new Error(`El SRI no recibió la factura. Estado: ${receptionResult.estado}`);
-    }
-    
-    console.log("Factura RECIBIDA por el SRI.");
-
-    // 5. Authorize document. This can take a few seconds.
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before authorizing
-
-    const authorizationResult = await documentAuthorization(accessKey, authorizationUrl);
-    console.log("Resultado de Autorización SRI:", authorizationResult);
-
-    // TODO: Process authorizationResult and save the final status and data to your database.
 
   } catch (error) {
     console.error("Error en el proceso de facturación:", error);
