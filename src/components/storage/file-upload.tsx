@@ -6,9 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle, UploadCloud } from 'lucide-react';
-import { Label } from '../ui/label';
 
-export function FileUpload() {
+export interface FileUploadProps {
+  uploadPath?: string;
+  accept?: string;
+  id?: string;
+}
+
+export function FileUpload({ uploadPath = 'uploads', accept, id = 'file-upload' }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const { progress, url, error, isUploading, isSuccess, uploadFile } = useUploadFile();
 
@@ -20,22 +25,19 @@ export function FileUpload() {
 
   const handleUpload = async () => {
     if (file) {
-        await uploadFile(file, 'certs');
+        await uploadFile(file, uploadPath);
     }
   };
 
   return (
     <div className="space-y-4">
-        <div className="space-y-2">
-            <Label htmlFor="file-upload">Sube tu certificado (.p12)</Label>
-            <div className="flex items-center gap-2">
-                <Input id="file-upload" type="file" onChange={handleFileChange} accept=".p12" className="flex-grow" />
-                <Button onClick={handleUpload} disabled={!file || isUploading}>
-                    <UploadCloud className="mr-2 h-4 w-4" />
-                    {isUploading ? 'Subiendo...' : 'Subir'}
-                </Button>
-            </div>
-        </div>
+      <div className="flex items-center gap-2">
+        <Input id={id} type="file" onChange={handleFileChange} accept={accept} className="flex-grow" />
+        <Button onClick={handleUpload} disabled={!file || isUploading}>
+            <UploadCloud className="mr-2 h-4 w-4" />
+            {isUploading ? 'Subiendo...' : 'Subir'}
+        </Button>
+      </div>
 
       {isUploading && <Progress value={progress} className="w-full" />}
       
@@ -44,8 +46,8 @@ export function FileUpload() {
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertTitle className="text-green-800 dark:text-green-300">Subida Exitosa</AlertTitle>
           <AlertDescription className="text-green-700 dark:text-green-400">
-            El archivo se ha subido correctamente.
-            <p className="text-xs font-mono mt-2 break-all">URL: {url}</p>
+            El archivo se ha subido correctamente. Para usarlo, copia la siguiente URL en tu variable de entorno.
+            <p className="text-xs font-mono mt-2 break-all bg-muted dark:bg-muted/40 p-2 rounded-md">{url}</p>
           </AlertDescription>
         </Alert>
       )}

@@ -17,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { FileUpload } from '@/components/storage/file-upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { FileUpload } from '@/components/storage/file-upload';
 
 export default function SettingsPage() {
   return (
@@ -28,9 +28,41 @@ export default function SettingsPage() {
       <div className="grid gap-6 max-w-2xl">
         <Card>
           <CardHeader>
+            <CardTitle>Datos de la Empresa</CardTitle>
+            <CardDescription>
+              Configura el correo de envío y el logo para tus facturas. Estos cambios se reflejarán en futuros documentos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="sender-email">Correo Electrónico de Envío</Label>
+              <Input
+                id="sender-email"
+                type="email"
+                placeholder="facturacion@tuempresa.com"
+              />
+              <p className="text-xs text-muted-foreground pt-1">
+                Este correo se usará como remitente al enviar las facturas a tus clientes.
+              </p>
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="logo-upload">Logo de la Empresa</Label>
+              <FileUpload id="logo-upload" uploadPath="logos" accept="image/png, image/jpeg" />
+               <p className="text-xs text-muted-foreground pt-1">
+                Sube el logo que aparecerá en tus facturas. Se recomienda un archivo PNG o JPG.
+              </p>
+            </div>
+          </CardContent>
+           <CardFooter>
+            <Button disabled>Guardar Cambios</Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Configuración SRI</CardTitle>
             <CardDescription>
-              Configura los parámetros para la comunicación con el SRI. Solo accesible para administradores.
+              Parámetros para la comunicación con el SRI.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -48,7 +80,7 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground pt-1">
-                Actualmente, el ambiente se controla a través de la variable de entorno `SRI_ENVIRONMENT`.
+                El ambiente se controla a través de la variable de entorno `SRI_ENVIRONMENT`.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -81,11 +113,27 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Certificado Digital</CardTitle>
             <CardDescription>
-              Sube tu certificado .p12 para la firma electrónica. El archivo se guardará de forma segura en Firebase Storage.
+              Sube tu certificado .p12 para la firma electrónica y configura las variables de entorno necesarias.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-              <FileUpload />
+          <CardContent className="space-y-6">
+              <Alert>
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Configuración Requerida</AlertTitle>
+                <AlertDescription>
+                    <p>
+                    Para firmar facturas, debes configurar dos variables de entorno en tu servicio de hosting (ej. Firebase App Hosting):
+                    </p>
+                    <ul className="list-disc pl-5 mt-2 space-y-1 font-mono text-xs">
+                        <li><span className="font-semibold">P12_URL</span>: La URL de tu archivo .p12 subido a Storage.</li>
+                        <li><span className="font-semibold">P12_PASSWORD</span>: La contraseña de tu certificado.</li>
+                    </ul>
+                </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="cert-upload">Sube tu certificado (.p12)</Label>
+              <FileUpload id="cert-upload" uploadPath="certs" accept=".p12" />
+            </div>
           </CardContent>
         </Card>
       </div>
