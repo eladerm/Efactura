@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -8,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { TestCard } from '@/components/pruebas/TestCard';
-import { callCloudFunction } from '@/lib/functionsClient';
 import type { TestExecution, TestName, TestStatus } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,14 +14,15 @@ import { StatusBadge } from '@/components/pruebas/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Ban } from 'lucide-react';
+import { buildInvoiceXmlTest, checkP12Test, pingTest, signXmlTest, sriAuthorizeTest, sriPingTest, sriSendTest, testP12SecretTest } from '@/app/actions/sri-tests';
 
-const testsConfig: { name: TestName; title: string; description: string; method: "GET" | "POST"; }[] = [
-    { name: "ping", title: "Ping a Functions", description: "Verifica conectividad básica con el backend de Firebase Functions.", method: "GET" },
-    { name: "sriPing", title: "Ping a SRI", description: "Comprueba la conexión con los endpoints WSDL del SRI en ambiente de pruebas.", method: "GET" },
-    { name: "checkP12", title: "Verificar Certificado P12", description: "Confirma que el archivo .p12 se puede leer desde GCS.", method: "GET" },
-    { name: "testP12Secret", title: "Verificar Secreto de Contraseña", description: "Confirma que la contraseña del .p12 se puede leer desde Secret Manager.", method: "GET" },
-    { name: "signXmlTest", title: "Prueba de Firma de XML", description: "Realiza una firma de un XML de prueba con el certificado y la contraseña.", method: "GET" },
+const testsConfig: { name: TestName; title: string; description: string; }[] = [
+    { name: "ping", title: "Ping a Server Actions", description: "Verifica conectividad básica con el backend de Next.js." },
+    { name: "sriPing", title: "Ping a SRI", description: "Comprueba la conexión con los endpoints WSDL del SRI en ambiente de pruebas." },
+    { name: "checkP12", title: "Verificar Certificado P12", description: "Confirma que el archivo .p12 se puede leer desde la URL configurada." },
+    { name: "testP12Secret", title: "Verificar Secreto de Contraseña", description: "Confirma que la contraseña del .p12 está configurada." },
+    { name: "signXmlTest", title: "Prueba de Firma de XML", description: "Realiza una firma de un XML de prueba con el certificado y la contraseña." },
 ];
 
 export default function PruebasSriPage() {
@@ -35,8 +34,8 @@ export default function PruebasSriPage() {
     const addHistory = (execution: TestExecution) => {
         setHistory(prev => [execution, ...prev].slice(0, 10));
     };
-
-    const handleRunTest = async (testName: TestName, body?: any) => {
+    
+    const handleRunTest = async (testName: TestName, body?: any): Promise<any> => {
         const start = Date.now();
         const executionId = `${testName}-${start}`;
         const initialExecution: TestExecution = {
@@ -51,7 +50,23 @@ export default function PruebasSriPage() {
         addHistory(initialExecution);
         
         try {
-            const result = await callCloudFunction(testName, { method: testsConfig.find(t => t.name === testName)?.method || "GET", body });
+            let result;
+            switch(testName) {
+                case 'ping': result = await pingTest(); break;
+                case 'sriPing': result = await sriPingTest(); break;
+                case 'checkP12': result = await checkP12Test(); break;
+                case 'testP12Secret': result = await testP12SecretTest(); break;
+                case 'signXmlTest': result = await signXmlTest(); break;
+                case 'buildInvoiceXml': result = await buildInvoiceXmlTest(body); break;
+                case 'sriSendTest': result = await sriSendTest(body); break;
+                case 'sriAuthorizeTest': result = await sriAuthorizeTest(body); break;
+                default: throw new Error(`Test '${testName}' no implementado`);
+            }
+
+            if (!result.ok) {
+                throw new Error(result.error || 'El test retornó un error no especificado.');
+            }
+
             const duration = Date.now() - start;
             const finalExecution: TestExecution = { ...initialExecution, status: "success", result, duration };
             setExecutions(prev => ({ ...prev, [testName]: finalExecution }));
@@ -80,11 +95,14 @@ export default function PruebasSriPage() {
         setExecutions(prev => ({ ...prev, fullFlow: initialExecution }));
         addHistory(initialExecution);
 
-        const updateFlowResult = (status: TestStatus, stepResult: any) => {
+        const updateFlowState = (status: TestStatus, stepResult: any) => {
              setExecutions(prev => {
                 const current = prev.fullFlow;
+                if (!current) return prev;
                 const newResult = {...current.result, steps: [...current.result.steps, stepResult]};
-                const newExecution = {...current, status, result: newResult };
+                const newExecution: TestExecution = {...current, status, result: newResult };
+                // Also update history
+                setHistory(h => h.map(i => i.id === executionId ? newExecution : i));
                 return {...prev, fullFlow: newExecution };
              });
         }
@@ -92,18 +110,27 @@ export default function PruebasSriPage() {
         // Step 1: Build XML
         const xmlResult = await handleRunTest("buildInvoiceXml", { compradorNombre: comprador.nombre, compradorDoc: comprador.doc });
         if (!xmlResult?.xmlB64) {
-             updateFlowResult("error", {step: "buildInvoiceXml", error: "No se pudo generar el XML."});
+             updateFlowState("error", {step: "buildInvoiceXml", ok: false, error: "No se pudo generar el XML."});
              return;
         }
-        updateFlowResult("running", { step: "buildInvoiceXml", ok: true, claveAcceso: xmlResult.claveAcceso });
+        updateFlowState("running", { step: "buildInvoiceXml", ok: true, claveAcceso: xmlResult.claveAcceso });
         
-        // Step 2: Send to SRI
+        // Step 2: Send to SRI (includes signing)
         const sendResult = await handleRunTest("sriSendTest", { xmlB64: xmlResult.xmlB64 });
-        if (!sendResult) {
-            updateFlowResult("error", {step: "sriSendTest", error: "Fallo en el envío al SRI."});
+        if (!sendResult || !sendResult.ok) {
+            updateFlowState("error", {step: "sriSendTest", ok: false, error: sendResult?.error || "Fallo en el envío al SRI."});
             return;
         }
-        updateFlowResult("success", { step: "sriSendTest", ok: true, result: sendResult });
+        updateFlowState("running", { step: "sriSendTest", ok: true, result: sendResult.sri_response });
+
+        // Step 3: Authorize
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for SRI to process
+        const authResult = await handleRunTest("sriAuthorizeTest", { claveAcceso: xmlResult.claveAcceso });
+         if (!authResult || !authResult.ok) {
+            updateFlowState("error", {step: "sriAuthorizeTest", ok: false, error: authResult?.error || "Fallo en la autorización."});
+            return;
+        }
+        updateFlowState("success", { step: "sriAuthorizeTest", ok: true, result: authResult.sri_response });
         
         const duration = Date.now() - start;
         setExecutions(prev => ({...prev, fullFlow: {...prev.fullFlow, duration, status: "success"}}));
@@ -175,7 +202,7 @@ export default function PruebasSriPage() {
                 <CardFooter>
                      <TestCard
                         title="Paso: Generar XML"
-                        description="Ejecuta la función `buildInvoiceXml` con los datos del comprador."
+                        description="Ejecuta la acción `buildInvoiceXmlTest` con los datos del comprador."
                         onRun={() => handleRunTest("buildInvoiceXml", { compradorNombre: comprador.nombre, compradorDoc: comprador.doc })}
                         execution={executions["buildInvoiceXml"]}
                     />
@@ -183,8 +210,8 @@ export default function PruebasSriPage() {
             </Card>
 
             <TestCard
-                title="Flujo Completo: buildInvoiceXml -> sriSendTest"
-                description="Ejecuta la secuencia de generar un XML y enviarlo al SRI."
+                title="Flujo Completo: Generar -> Firmar -> Enviar -> Autorizar"
+                description="Ejecuta la secuencia completa para emitir una factura en el ambiente de pruebas del SRI."
                 onRun={handleFullFlow}
                 execution={executions["fullFlow"]}
             >
@@ -193,13 +220,13 @@ export default function PruebasSriPage() {
                         <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 dark:bg-muted/20 rounded-md">
                             <span className="font-semibold text-sm">{index + 1}. {step.step}</span>
                             {step.ok ? <StatusBadge status="success" /> : <StatusBadge status="error" />}
-                            <span className="text-xs text-muted-foreground truncate">{step.claveAcceso || step.error}</span>
+                            <span className="text-xs text-muted-foreground truncate">{step.claveAcceso || step.error || 'OK'}</span>
                         </div>
                     ))}
                     {executions.fullFlow?.status === "error" && (
                          <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-md text-red-500">
                             <AlertTriangle className="h-4 w-4" />
-                            <span className="font-semibold text-sm">Flujo detenido por error.</span>
+                            <span className="font-semibold text-sm">Flujo detenido por error. Revisa los logs.</span>
                         </div>
                     )}
                 </div>

@@ -11,10 +11,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Download, Eye, Repeat, FileText } from 'lucide-react';
+import { MoreHorizontal, Download, Eye, Repeat, FileText, Ban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { annulInvoice } from '@/app/actions/invoices';
+import { useTransition } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const statusStyles: Record<InvoiceStatus, string> = {
     Autorizada: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400 border-green-300 dark:border-green-700/80',
@@ -67,8 +70,34 @@ export const columns: ColumnDef<Invoice>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: function ActionsCell({ row }) {
       const invoice = row.original;
+      const { toast } = useToast();
+      const [isPending, startTransition] = useTransition();
+      const canAnnul = invoice.status !== 'Autorizada' && invoice.status !== 'Anulada';
+
+      const handleAnnul = async () => {
+        if (!confirm('¿Estás seguro de que deseas anular esta factura? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        startTransition(async () => {
+            try {
+                await annulInvoice(invoice.id);
+                toast({
+                    title: "Acción en Proceso",
+                    description: "Se está anulando la factura. El estado se actualizará en breve.",
+                });
+            } catch (error: any) {
+                 toast({
+                    variant: "destructive",
+                    title: "Error al Anular",
+                    description: error.message,
+                });
+            }
+        });
+      };
+
       return (
         <div className="text-right">
           <DropdownMenu>
@@ -97,6 +126,14 @@ export const columns: ColumnDef<Invoice>[] = [
                <DropdownMenuItem>
                 <Repeat className="mr-2 h-4 w-4" />
                 Reintentar Autorización
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                disabled={!canAnnul || isPending}
+                onClick={handleAnnul}
+                className="text-destructive focus:text-destructive"
+                >
+                <Ban className="mr-2 h-4 w-4" />
+                Anular
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

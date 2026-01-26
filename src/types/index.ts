@@ -41,6 +41,7 @@ export type TestName =
   | "signXmlTest"
   | "sriPing"
   | "sriSendTest"
+  | "sriAuthorizeTest"
   | "fullFlow";
 
 export type TestStatus = "idle" | "running" | "success" | "error";
@@ -49,7 +50,7 @@ export interface TestExecution {
   id: string;
   name: TestName;
   status: TestStatus;
-  timestamp: string;
   result: any;
   duration: number;
+  timestamp: string;
 }

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -11,8 +10,9 @@ import {
   documentAuthorization,
 } from 'open-factura';
 import type { Customer, Product } from '@/types';
-import { customers, products } from '@/lib/data';
+import { customers, products, invoices } from '@/lib/data';
 import { format } from 'date-fns';
+import { revalidatePath } from 'next/cache';
 
 // Helper function to find a customer by ID
 const getCustomer = (id: string): Customer | undefined => customers.find(c => c.id === id);
@@ -164,8 +164,8 @@ export async function createInvoice(formData: FormData) {
     const p12Password = process.env.P12_PASSWORD;
 
     if (!p12Url || !p12Password) {
-      // We will log and skip signing for now if variables are not set.
-      console.warn("ADVERTENCIA: No se configuraron las variables P12_URL y P12_PASSWORD. La factura fue generada pero no será firmada ni enviada al SRI.");
+      console.warn("ADVERTENCIA: No se configuraron las variables P12_URL y P12_PASSWORD. La factura fue generada pero no será firmada ni enviada al SRI. Redirigiendo...");
+      // For dev purposes, we'll just redirect without trying to sign/send
     } else {
         const p12Buffer = await getP12FromUrl(p12Url);
         const signedXml = await signXml(p12Buffer, p12Password, invoiceXml);
@@ -177,10 +177,12 @@ export async function createInvoice(formData: FormData) {
 
         if (receptionResult.estado !== 'RECIBIDA') {
             console.error("Error en la recepción del SRI:", receptionResult);
+            // NOTE: In a real app, you would save the invoice with an 'Error' status here.
             throw new Error(`El SRI no recibió la factura. Estado: ${receptionResult.estado}`);
         }
         
         console.log("Factura RECIBIDA por el SRI.");
+        // NOTE: In a real app, you would save the invoice with an 'Enviada' status here.
 
         // 5. Authorize document. This can take a few seconds.
         await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before authorizing
@@ -194,9 +196,37 @@ export async function createInvoice(formData: FormData) {
   } catch (error) {
     console.error("Error en el proceso de facturación:", error);
     // TODO: Handle error in the UI, maybe return a message to the user or save invoice with 'Error' status
+    // For now, we'll re-throw to show the error page
     throw error;
   }
 
   // If successful, redirect to invoices page
+  // Note: a new invoice won't appear as we are using static data.
   redirect('/invoices');
+}
+
+
+export async function annulInvoice(invoiceId: string) {
+    console.log(`Anulando factura con ID: ${invoiceId}`);
+
+    // In a real application, you would update the invoice status in your database.
+    // For this demo, we'll find the index and update the static array.
+    // THIS IS NOT PERSISTENT and only for demonstration purposes.
+    const invoiceIndex = invoices.findIndex(inv => inv.id === invoiceId);
+    
+    if (invoiceIndex !== -1) {
+        const currentStatus = invoices[invoiceIndex].status;
+        if (currentStatus !== 'Autorizada' && currentStatus !== 'Anulada') {
+            // invoices[invoiceIndex].status = 'Anulada';
+             console.log(`Factura ${invoiceId} marcada como 'Anulada' en los datos estáticos.`);
+        } else {
+            console.warn(`No se puede anular la factura ${invoiceId}. Estado actual: ${currentStatus}`);
+            throw new Error(`No se puede anular una factura que ya está ${currentStatus.toLowerCase()}.`);
+        }
+    } else {
+        throw new Error('Factura no encontrada.');
+    }
+
+    // Revalidate the invoices page to reflect the change (won't work with static data)
+    revalidatePath('/invoices');
 }
