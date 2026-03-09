@@ -1,62 +1,64 @@
-import { DollarSign, FileText, Users, AlertCircle } from 'lucide-react';
+import { DollarSign, FileCheck, Users, Clock, ArrowUpRight, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { RevenueChart } from '@/components/dashboard/revenue-chart';
 import { RecentInvoices } from '@/components/dashboard/recent-invoices';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const isSignatureConfigured = !!(process.env.P12_URL && process.env.P12_PASSWORD);
-
   return (
-    <div>
-      {!isSignatureConfigured && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Configuración de Firma Incompleta</AlertTitle>
-          <AlertDescription>
-            Para emitir facturas, es necesario configurar tu certificado digital.
-            Asegúrate de que las variables de entorno `P12_URL` y `P12_PASSWORD` estén configuradas.
-            <Link href="/settings" className="font-bold underline ml-1">
-              Ir a Configuración para más detalles.
-            </Link>
-          </AlertDescription>
-        </Alert>
-      )}
-      <PageHeader title="Tablero" />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+    <div className="space-y-10 animate-fade-in">
+      <div className="flex items-end justify-between">
+        <div>
+          <PageHeader title="Panel de Control" />
+          <p className="text-muted-foreground -mt-6">Bienvenido de nuevo. Aquí tienes un resumen de tu actividad hoy.</p>
+        </div>
+        <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-white btn-elegant rounded-2xl px-8 h-12">
+          <Link href="/invoices/new">
+            <Plus className="mr-2 h-5 w-5" />
+            Emitir Factura
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Ingresos Totales"
-          value="$45,231.89"
-          description="+20.1% desde el mes pasado"
+          title="Ingresos Mensuales"
+          value="$12,845.00"
+          description="Incremento del 12% vs el mes pasado"
           Icon={DollarSign}
+          trend="up"
         />
         <StatCard
-          title="Facturas Autorizadas"
-          value="+2350"
-          description="+180.1% desde el mes pasado"
-          Icon={FileText}
+          title="Facturas Emitidas"
+          value="452"
+          description="Comprobantes autorizados SRI"
+          Icon={FileCheck}
+          trend="up"
         />
         <StatCard
-          title="Nuevos Clientes"
-          value="+12"
-          description="+19% desde el mes pasado"
+          title="Clientes Nuevos"
+          value="14"
+          description="Registrados este mes"
           Icon={Users}
+          trend="up"
         />
         <StatCard
-          title="Pendientes de Autorización"
-          value="15"
-          description="Esperando respuesta del SRI"
-          Icon={AlertCircle}
+          title="Pendientes SRI"
+          value="8"
+          description="Esperando autorización"
+          Icon={Clock}
+          trend="down"
         />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
+
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+        <div className="lg:col-span-4 h-full">
           <RevenueChart />
         </div>
-        <div className="lg:col-span-2">
-            <RecentInvoices />
+        <div className="lg:col-span-3 h-full">
+          <RecentInvoices />
         </div>
       </div>
     </div>

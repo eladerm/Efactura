@@ -2,80 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-body), sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 278 39% 15%;
+    --background: 278 20% 98%;
+    --foreground: 278 45% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 278 39% 15%;
+    --card-foreground: 278 45% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 278 39% 15%;
-    --primary: 278 39% 15%;
+    --popover-foreground: 278 45% 10%;
+    --primary: 278 45% 15%; /* Dark Purple #301934 */
     --primary-foreground: 0 0% 98%;
-    --secondary: 278 20% 96%;
-    --secondary-foreground: 278 39% 15%;
-    --muted: 278 20% 97%;
-    --muted-foreground: 278 20% 40%;
-    --accent: 337 85% 47%;
+    --secondary: 278 20% 94%;
+    --secondary-foreground: 278 45% 20%;
+    --muted: 278 20% 94%;
+    --muted-foreground: 278 10% 45%;
+    --accent: 337 85% 47%; /* Hot Pink #E0115F */
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 278 20% 90%;
     --input: 278 20% 90%;
     --ring: 337 85% 47%;
-    --chart-1: 278 39% 15%;
-    --chart-2: 337 85% 47%;
-    --chart-3: 328 59% 39%;
-    --chart-4: 278 39% 45%;
-    --chart-5: 337 85% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 278 39% 15%;
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 278 39% 15%;
-    --sidebar-accent: 278 39% 25%;
+    --radius: 1rem;
+    --sidebar-background: 278 45% 12%;
+    --sidebar-foreground: 278 20% 85%;
+    --sidebar-primary: 337 85% 47%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 278 45% 20%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 278 39% 20%;
-    --sidebar-ring: 337 85% 57%;
+    --sidebar-border: 278 45% 18%;
+    --sidebar-ring: 337 85% 47%;
   }
 
   .dark {
-    --background: 278 20% 6%;
-    --foreground: 0 0% 98%;
-    --card: 278 20% 8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 278 20% 6%;
-    --popover-foreground: 0 0% 98%;
+    --background: 278 40% 4%;
+    --foreground: 278 10% 95%;
+    --card: 278 40% 7%;
+    --card-foreground: 278 10% 95%;
+    --popover: 278 40% 5%;
+    --popover-foreground: 278 10% 95%;
     --primary: 0 0% 98%;
-    --primary-foreground: 278 39% 15%;
-    --secondary: 278 20% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 278 20% 12%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 337 85% 57%;
+    --primary-foreground: 278 45% 10%;
+    --secondary: 278 30% 12%;
+    --secondary-foreground: 278 10% 95%;
+    --muted: 278 30% 12%;
+    --muted-foreground: 278 10% 65%;
+    --accent: 337 85% 55%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 278 20% 15%;
-    --input: 278 20% 15%;
-    --ring: 337 85% 57%;
-    --chart-1: 0 0% 98%;
-    --chart-2: 337 85% 57%;
-    --chart-3: 328 59% 49%;
-    --chart-4: 278 39% 65%;
-    --chart-5: 337 85% 77%;
-    --sidebar-background: 278 20% 8%;
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 278 20% 8%;
-    --sidebar-accent: 278 20% 15%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 278 10% 95%;
+    --border: 278 30% 15%;
+    --input: 278 30% 15%;
+    --ring: 337 85% 55%;
+    --sidebar-background: 278 50% 5%;
+    --sidebar-foreground: 278 10% 90%;
+    --sidebar-primary: 337 85% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 278 50% 10%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 278 20% 12%;
-    --sidebar-ring: 337 85% 57%;
+    --sidebar-border: 278 50% 8%;
+    --sidebar-ring: 337 85% 55%;
   }
 }
 
@@ -84,6 +70,28 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body antialiased selection:bg-accent/30;
   }
+}
+
+.glass-card {
+  @apply bg-card/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+}
+
+.btn-elegant {
+  @apply transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-accent/25;
+}
+
+.font-headline {
+  @apply tracking-tight font-bold;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
