@@ -49,6 +49,13 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [mounted, setMounted] = React.useState(false);
+
+  // Evitar errores de hidratación asegurándonos de que el estado de la ruta
+  // solo se aplique plenamente una vez que el cliente está montado.
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <SidebarProvider>
@@ -62,21 +69,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarHeader>
           <SidebarContent className="px-4 py-8">
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href} className="mb-1">
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={item.label}
-                    className="rounded-xl h-12 transition-all duration-200 data-[active=true]:bg-accent data-[active=true]:text-white data-[active=true]:shadow-md"
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="font-semibold text-sm">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map((item) => {
+                const isActive = mounted && pathname ? pathname.startsWith(item.href) : false;
+                
+                return (
+                  <SidebarMenuItem key={item.href} className="mb-1">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                      className="rounded-xl h-12 transition-all duration-200 data-[active=true]:bg-accent data-[active=true]:text-white data-[active=true]:shadow-md"
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-semibold text-sm">{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4 border-t border-sidebar-border/50">
