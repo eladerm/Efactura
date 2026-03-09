@@ -14,21 +14,23 @@ import { StatusBadge } from '@/components/pruebas/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, Ban } from 'lucide-react';
+import { AlertTriangle, Key, ShieldCheck } from 'lucide-react';
 import { buildInvoiceXmlTest, checkP12Test, pingTest, signXmlTest, sriAuthorizeTest, sriPingTest, sriSendTest, testP12SecretTest } from '@/app/actions/sri-tests';
+import Link from 'next/link';
 
 const testsConfig: { name: TestName; title: string; description: string; }[] = [
     { name: "ping", title: "Ping a Server Actions", description: "Verifica conectividad básica con el backend de Next.js." },
     { name: "sriPing", title: "Ping a SRI", description: "Comprueba la conexión con los endpoints WSDL del SRI en ambiente de pruebas." },
-    { name: "checkP12", title: "Verificar Certificado P12", description: "Confirma que el archivo .p12 se puede leer desde la URL configurada." },
-    { name: "testP12Secret", title: "Verificar Secreto de Contraseña", description: "Confirma que la contraseña del .p12 está configurada." },
-    { name: "signXmlTest", title: "Prueba de Firma de XML", description: "Realiza una firma de un XML de prueba con el certificado y la contraseña." },
+    { name: "checkP12", title: "Verificar Certificado P12", description: "Confirma que el archivo .p12 se puede leer desde la URL." },
+    { name: "testP12Secret", title: "Verificar Contraseña", description: "Confirma que la contraseña del .p12 está configurada." },
+    { name: "signXmlTest", title: "Prueba de Firma de XML", description: "Realiza una firma de un XML de prueba con el certificado." },
 ];
 
 export default function PruebasSriPage() {
     const [executions, setExecutions] = useState<Record<string, TestExecution>>({});
     const [history, setHistory] = useState<TestExecution[]>([]);
     const [comprador, setComprador] = useState({ nombre: "Consumidor Final", doc: "9999999999999" });
+    const [credentials, setCredentials] = useState({ url: "", pass: "" });
     const [environment, setEnvironment] = useState("pruebas");
 
     const addHistory = (execution: TestExecution) => {
@@ -54,11 +56,11 @@ export default function PruebasSriPage() {
             switch(testName) {
                 case 'ping': result = await pingTest(); break;
                 case 'sriPing': result = await sriPingTest(); break;
-                case 'checkP12': result = await checkP12Test(); break;
-                case 'testP12Secret': result = await testP12SecretTest(); break;
-                case 'signXmlTest': result = await signXmlTest(); break;
+                case 'checkP12': result = await checkP12Test(credentials.url); break;
+                case 'testP12Secret': result = await testP12SecretTest(credentials.pass); break;
+                case 'signXmlTest': result = await signXmlTest(credentials.url, credentials.pass); break;
                 case 'buildInvoiceXml': result = await buildInvoiceXmlTest(body); break;
-                case 'sriSendTest': result = await sriSendTest(body); break;
+                case 'sriSendTest': result = await sriSendTest({ ...body, p12Url: credentials.url, p12Pass: credentials.pass }); break;
                 case 'sriAuthorizeTest': result = await sriAuthorizeTest(body); break;
                 default: throw new Error(`Test '${testName}' no implementado`);
             }
@@ -101,7 +103,6 @@ export default function PruebasSriPage() {
                 if (!current) return prev;
                 const newResult = {...current.result, steps: [...current.result.steps, stepResult]};
                 const newExecution: TestExecution = {...current, status, result: newResult };
-                // Also update history
                 setHistory(h => h.map(i => i.id === executionId ? newExecution : i));
                 return {...prev, fullFlow: newExecution };
              });
@@ -134,7 +135,6 @@ export default function PruebasSriPage() {
         
         const duration = Date.now() - start;
         setExecutions(prev => ({...prev, fullFlow: {...prev.fullFlow, duration, status: "success"}}));
-
     };
 
 
@@ -142,6 +142,40 @@ export default function PruebasSriPage() {
     <div className="space-y-8">
       <PageHeader title="Pruebas de Integración SRI" />
       
+      <Card className="border-accent/20 bg-accent/5">
+        <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-accent" />
+                Credenciales de Prueba (Opcional)
+            </CardTitle>
+            <CardDescription>
+                Si no has configurado las variables de entorno, puedes pegarlas aquí para realizar los tests.
+                Sube tu .p12 en <Link href="/settings" className="underline font-semibold">Configuración</Link> primero.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="p12-url">URL del Certificado (.p12)</Label>
+                <Input 
+                    id="p12-url" 
+                    placeholder="https://firebasestorage..." 
+                    value={credentials.url}
+                    onChange={e => setCredentials(c => ({...c, url: e.target.value}))}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="p12-pass">Contraseña del Certificado</Label>
+                <Input 
+                    id="p12-pass" 
+                    type="password" 
+                    placeholder="Tu contraseña"
+                    value={credentials.pass}
+                    onChange={e => setCredentials(c => ({...c, pass: e.target.value}))}
+                />
+            </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center space-x-6">
         <Label>Modo de Operación:</Label>
         <RadioGroup defaultValue="pruebas" className="flex items-center" onValueChange={setEnvironment} value={environment}>
@@ -152,9 +186,9 @@ export default function PruebasSriPage() {
           <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 opacity-50">
                         <RadioGroupItem value="produccion" id="r_produccion" disabled />
-                        <Label htmlFor="r_produccion" className="text-muted-foreground/50">Producción</Label>
+                        <Label htmlFor="r_produccion">Producción</Label>
                     </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -186,7 +220,7 @@ export default function PruebasSriPage() {
                 <CardHeader>
                     <CardTitle>Generar XML de Factura</CardTitle>
                     <CardDescription>
-                        Crea un XML de factura con datos de prueba. Se usará en el flujo completo.
+                        Crea un XML de factura con datos de prueba.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -202,7 +236,7 @@ export default function PruebasSriPage() {
                 <CardFooter>
                      <TestCard
                         title="Paso: Generar XML"
-                        description="Ejecuta la acción `buildInvoiceXmlTest` con los datos del comprador."
+                        description="Ejecuta buildInvoiceXmlTest con los datos del comprador."
                         onRun={() => handleRunTest("buildInvoiceXml", { compradorNombre: comprador.nombre, compradorDoc: comprador.doc })}
                         execution={executions["buildInvoiceXml"]}
                     />
@@ -211,7 +245,7 @@ export default function PruebasSriPage() {
 
             <TestCard
                 title="Flujo Completo: Generar -> Firmar -> Enviar -> Autorizar"
-                description="Ejecuta la secuencia completa para emitir una factura en el ambiente de pruebas del SRI."
+                description="Ejecuta la secuencia completa en el ambiente de pruebas del SRI."
                 onRun={handleFullFlow}
                 execution={executions["fullFlow"]}
             >
@@ -226,7 +260,7 @@ export default function PruebasSriPage() {
                     {executions.fullFlow?.status === "error" && (
                          <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-md text-red-500">
                             <AlertTriangle className="h-4 w-4" />
-                            <span className="font-semibold text-sm">Flujo detenido por error. Revisa los logs.</span>
+                            <span className="font-semibold text-sm">Flujo detenido por error.</span>
                         </div>
                     )}
                 </div>

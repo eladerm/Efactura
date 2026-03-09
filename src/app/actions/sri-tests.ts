@@ -79,12 +79,12 @@ function getDummyInvoiceData(comprador?: { nombre: string, doc: string }) {
     return { infoTributaria, infoFactura, detalles };
 }
 
-async function signDummyXml(unsignedXml: string) {
-    const p12Url = process.env.P12_URL;
-    const p12Password = process.env.P12_PASSWORD;
+async function signDummyXml(unsignedXml: string, customUrl?: string, customPass?: string) {
+    const p12Url = customUrl || process.env.P12_URL;
+    const p12Password = customPass || process.env.P12_PASSWORD;
 
     if (!p12Url || !p12Password) {
-        throw new Error("Missing P12_URL or P12_PASSWORD environment variables.");
+        throw new Error("Faltan credenciales P12 (URL o Contraseña).");
     }
     const p12Buffer = await getP12FromUrl(p12Url);
     return signXml(p12Buffer, p12Password, unsignedXml);
@@ -114,32 +114,32 @@ export async function sriPingTest() {
     }
 }
 
-export async function checkP12Test() {
-    const p12Url = process.env.P12_URL;
+export async function checkP12Test(url?: string) {
+    const p12Url = url || process.env.P12_URL;
     if (!p12Url) {
-        return { ok: false, error: "La variable de entorno P12_URL no está configurada." };
+        return { ok: false, error: "La URL del certificado P12 no está configurada (ni en variables ni manual)." };
     }
     try {
         const p12Buffer = await getP12FromUrl(p12Url);
-        return { ok: true, message: `Certificado P12 leído correctamente desde la URL. Tamaño: ${p12Buffer.byteLength} bytes.` };
+        return { ok: true, message: `Certificado P12 leído correctamente. Tamaño: ${p12Buffer.byteLength} bytes.` };
     } catch (e: any) {
-        return { ok: false, error: `No se pudo leer el certificado desde la URL: ${e.message}` };
+        return { ok: false, error: `No se pudo leer el certificado: ${e.message}` };
     }
 }
 
-export async function testP12SecretTest() {
-     const p12Password = process.env.P12_PASSWORD;
+export async function testP12SecretTest(pass?: string) {
+     const p12Password = pass || process.env.P12_PASSWORD;
     if (!p12Password) {
-        return { ok: false, error: "La variable de entorno P12_PASSWORD no está configurada." };
+        return { ok: false, error: "La contraseña del P12 no está configurada." };
     }
-    return { ok: true, message: "La variable de entorno P12_PASSWORD está presente." };
+    return { ok: true, message: "La contraseña está presente." };
 }
 
-export async function signXmlTest() {
+export async function signXmlTest(url?: string, pass?: string) {
      try {
         const { invoice } = generateInvoice(getDummyInvoiceData());
         const unsignedXml = generateInvoiceXml(invoice);
-        const signedXml = await signDummyXml(unsignedXml);
+        const signedXml = await signDummyXml(unsignedXml, url, pass);
         return { ok: true, message: "XML de prueba generado y firmado exitosamente.", signedXml: signedXml.toString('base64') };
     } catch (e: any) {
         return { ok: false, error: `Error durante la firma: ${e.message}` };
@@ -160,12 +160,12 @@ export async function buildInvoiceXmlTest(comprador: { nombre: string, doc: stri
     }
 }
 
-export async function sriSendTest(body: { xmlB64: string }) {
+export async function sriSendTest(body: { xmlB64: string, p12Url?: string, p12Pass?: string }) {
     try {
-        if(!body.xmlB64) throw new Error("xmlB64 no fue proporcionado en el body.");
+        if(!body.xmlB64) throw new Error("xmlB64 no fue proporcionado.");
 
         const unsignedXml = Buffer.from(body.xmlB64, 'base64').toString('utf8');
-        const signedXml = await signDummyXml(unsignedXml);
+        const signedXml = await signDummyXml(unsignedXml, body.p12Url, body.p12Pass);
         
         const receptionResult = await documentReception(signedXml, sriTestEndpoints.reception);
 
@@ -183,7 +183,7 @@ export async function sriSendTest(body: { xmlB64: string }) {
 
 export async function sriAuthorizeTest(body: { claveAcceso: string }) {
      try {
-        if(!body.claveAcceso) throw new Error("claveAcceso no fue proporcionada en el body.");
+        if(!body.claveAcceso) throw new Error("claveAcceso no fue proporcionada.");
         
         const authorizationResult = await documentAuthorization(body.claveAcceso, sriTestEndpoints.authorization);
         const auth = authorizationResult.autorizaciones?.autorizacion?.[0];
