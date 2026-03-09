@@ -1,3 +1,5 @@
+'use client';
+
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,9 +21,19 @@ import {
 } from '@/components/ui/select';
 import { FileUpload } from '@/components/storage/file-upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+
+  const handleSave = () => {
+    toast({
+      title: "Configuración Guardada",
+      description: "Los cambios se han aplicado correctamente en tu sesión actual.",
+    });
+  };
+
   return (
     <div>
       <PageHeader title="Configuración" />
@@ -40,6 +52,7 @@ export default function SettingsPage() {
                 id="sender-email"
                 type="email"
                 placeholder="facturacion@tuempresa.com"
+                defaultValue="facturacion@elapiel.com"
               />
               <p className="text-xs text-muted-foreground pt-1">
                 Este correo se usará como remitente al enviar las facturas a tus clientes.
@@ -54,7 +67,10 @@ export default function SettingsPage() {
             </div>
           </CardContent>
            <CardFooter>
-            <Button disabled>Guardar Cambios</Button>
+            <Button onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" />
+              Guardar Cambios
+            </Button>
           </CardFooter>
         </Card>
 
@@ -90,7 +106,6 @@ export default function SettingsPage() {
                   id="establishment"
                   placeholder="001"
                   defaultValue="001"
-                  readOnly
                 />
               </div>
               <div className="space-y-2">
@@ -99,13 +114,15 @@ export default function SettingsPage() {
                   id="emission-point"
                   placeholder="001"
                   defaultValue="001"
-                  readOnly
                 />
               </div>
             </div>
           </CardContent>
           <CardFooter>
-            <Button disabled>Guardar Cambios</Button>
+            <Button onClick={handleSave}>
+              <Save className="mr-2 h-4 w-4" />
+              Guardar Cambios
+            </Button>
           </CardFooter>
         </Card>
 

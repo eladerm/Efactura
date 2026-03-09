@@ -14,7 +14,7 @@ import { StatusBadge } from '@/components/pruebas/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, Key, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Key, ShieldCheck, Play, Loader2 } from 'lucide-react';
 import { buildInvoiceXmlTest, checkP12Test, pingTest, signXmlTest, sriAuthorizeTest, sriPingTest, sriSendTest, testP12SecretTest } from '@/app/actions/sri-tests';
 import Link from 'next/link';
 
@@ -232,14 +232,26 @@ export default function PruebasSriPage() {
                         <Label htmlFor="compradorDoc">CI/RUC</Label>
                         <Input id="compradorDoc" value={comprador.doc} onChange={e => setComprador(c => ({...c, doc: e.target.value}))} />
                     </div>
+                    {executions.buildInvoiceXml && (
+                      <div className="pt-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <StatusBadge status={executions.buildInvoiceXml.status} />
+                          <span className="text-xs font-mono">{executions.buildInvoiceXml.timestamp}</span>
+                        </div>
+                        <pre className="p-2 bg-muted rounded text-[10px] overflow-auto max-h-40">
+                          {JSON.stringify(executions.buildInvoiceXml.result, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                 </CardContent>
-                <CardFooter>
-                     <TestCard
-                        title="Paso: Generar XML"
-                        description="Ejecuta buildInvoiceXmlTest con los datos del comprador."
-                        onRun={() => handleRunTest("buildInvoiceXml", { compradorNombre: comprador.nombre, compradorDoc: comprador.doc })}
-                        execution={executions["buildInvoiceXml"]}
-                    />
+                <CardFooter className="flex justify-end">
+                    <Button 
+                      onClick={() => handleRunTest("buildInvoiceXml", { compradorNombre: comprador.nombre, compradorDoc: comprador.doc })}
+                      disabled={executions.buildInvoiceXml?.status === "running"}
+                    >
+                      {executions.buildInvoiceXml?.status === "running" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                      Ejecutar Generación
+                    </Button>
                 </CardFooter>
             </Card>
 
