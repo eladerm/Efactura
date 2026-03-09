@@ -7,12 +7,14 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, children }: PageHeaderProps) {
   return (
-    <div className="flex flex-col gap-2 mb-10">
-      <div className="flex items-center gap-4">
-        <h1 className="text-5xl font-bold tracking-tight font-headline text-foreground leading-none">{title}</h1>
-        <div className="h-2 w-16 bg-gradient-to-r from-accent to-accent/40 rounded-full"></div>
+    <div className="flex flex-col gap-2 mb-12 animate-fade-in">
+      <div className="flex items-center gap-6">
+        <h1 className="text-6xl font-black tracking-tighter font-headline text-foreground leading-none drop-shadow-sm">
+          {title}
+        </h1>
+        <div className="h-2 w-24 bg-gradient-to-r from-accent via-accent/60 to-transparent rounded-full mt-2"></div>
       </div>
-      {children && <div className="flex items-center gap-3 mt-6">{children}</div>}
+      {children && <div className="flex items-center gap-4 mt-8">{children}</div>}
     </div>
   );
 }

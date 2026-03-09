@@ -4,64 +4,86 @@
 
 @layer base {
   :root {
-    --background: 278 20% 98%;
-    --foreground: 278 45% 10%;
+    /* Paleta Luxury ELAPIEL - Light Mode */
+    --background: 278 20% 99%;
+    --foreground: 278 50% 10%;
+    
     --card: 0 0% 100%;
-    --card-foreground: 278 45% 10%;
+    --card-foreground: 278 50% 10%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 278 45% 10%;
-    --primary: 278 45% 15%; /* Dark Purple #301934 */
+    --popover-foreground: 278 50% 10%;
+    
+    --primary: 278 45% 18%; /* Deep Royal Purple */
     --primary-foreground: 0 0% 98%;
-    --secondary: 278 20% 94%;
-    --secondary-foreground: 278 45% 20%;
-    --muted: 278 20% 94%;
+    
+    --secondary: 278 25% 96%;
+    --secondary-foreground: 278 45% 25%;
+    
+    --muted: 278 15% 94%;
     --muted-foreground: 278 10% 45%;
-    --accent: 337 85% 47%; /* Hot Pink #E0115F */
+    
+    --accent: 337 80% 50%; /* Lux Rose Accent */
     --accent-foreground: 0 0% 98%;
+    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 278 20% 90%;
-    --input: 278 20% 90%;
-    --ring: 337 85% 47%;
-    --radius: 1rem;
+    
+    --border: 278 20% 92%;
+    --input: 278 20% 92%;
+    --ring: 337 80% 50%;
+    
+    --radius: 1.25rem;
+
+    /* Sidebar - Paleta Intensa */
     --sidebar-background: 278 45% 12%;
-    --sidebar-foreground: 278 20% 85%;
-    --sidebar-primary: 337 85% 47%;
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-foreground: 278 20% 90%;
+    --sidebar-primary: 337 80% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 278 45% 20%;
-    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 278 45% 18%;
-    --sidebar-ring: 337 85% 47%;
+    --sidebar-ring: 337 80% 50%;
   }
 
   .dark {
-    --background: 278 40% 4%;
-    --foreground: 278 10% 95%;
-    --card: 278 40% 7%;
-    --card-foreground: 278 10% 95%;
-    --popover: 278 40% 5%;
-    --popover-foreground: 278 10% 95%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 278 45% 10%;
-    --secondary: 278 30% 12%;
-    --secondary-foreground: 278 10% 95%;
-    --muted: 278 30% 12%;
-    --muted-foreground: 278 10% 65%;
-    --accent: 337 85% 55%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 278 10% 95%;
-    --border: 278 30% 15%;
-    --input: 278 30% 15%;
-    --ring: 337 85% 55%;
-    --sidebar-background: 278 50% 5%;
-    --sidebar-foreground: 278 10% 90%;
-    --sidebar-primary: 337 85% 55%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 278 50% 10%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 278 50% 8%;
-    --sidebar-ring: 337 85% 55%;
+    /* Paleta Luxury ELAPIEL - Dark Mode */
+    --background: 278 45% 4%;
+    --foreground: 278 15% 96%;
+    
+    --card: 278 45% 7%;
+    --card-foreground: 278 15% 96%;
+    
+    --popover: 278 45% 6%;
+    --popover-foreground: 278 15% 96%;
+    
+    --primary: 278 20% 98%;
+    --primary-foreground: 278 50% 10%;
+    
+    --secondary: 278 35% 12%;
+    --secondary-foreground: 278 15% 96%;
+    
+    --muted: 278 35% 12%;
+    --muted-foreground: 278 15% 70%;
+    
+    --accent: 337 85% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 62% 35%;
+    --destructive-foreground: 278 15% 96%;
+    
+    --border: 278 35% 16%;
+    --input: 278 35% 16%;
+    --ring: 337 85% 60%;
+
+    --sidebar-background: 278 60% 3%;
+    --sidebar-foreground: 278 15% 92%;
+    --sidebar-primary: 337 85% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 278 60% 8%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 278 60% 7%;
+    --sidebar-ring: 337 85% 60%;
   }
 }
 
@@ -74,24 +96,31 @@
   }
 }
 
+/* Luxury Utilities */
 .glass-card {
-  @apply bg-card/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+  @apply bg-card/60 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(48,25,52,0.08)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)];
 }
 
 .btn-elegant {
-  @apply transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-accent/25;
+  @apply transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-accent/30 bg-gradient-to-r from-accent to-accent/80 text-white border-none;
 }
 
 .font-headline {
   @apply tracking-tight font-bold;
 }
 
+/* Luxury Gradients */
+.bg-mesh {
+  background-image: radial-gradient(at 0% 0%, hsla(278, 45%, 15%, 0.05) 0, transparent 50%),
+                    radial-gradient(at 50% 0%, hsla(337, 85%, 47%, 0.05) 0, transparent 50%);
+}
+
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+  animation: fadeIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
