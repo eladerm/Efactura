@@ -64,16 +64,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href} className="mb-1">
-                  <Link href={item.href} passHref legacyBehavior>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith(item.href)}
-                      tooltip={item.label}
-                      className="rounded-xl h-12 transition-all duration-200 data-[active=true]:bg-accent data-[active=true]:text-white data-[active=true]:shadow-md"
-                    >
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(item.href)}
+                    tooltip={item.label}
+                    className="rounded-xl h-12 transition-all duration-200 data-[active=true]:bg-accent data-[active=true]:text-white data-[active=true]:shadow-md"
+                  >
+                    <Link href={item.href}>
                       <item.icon className="h-5 w-5" />
                       <span className="font-semibold text-sm">{item.label}</span>
-                    </SidebarMenuButton>
-                  </Link>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -101,9 +102,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 mb-4 rounded-xl p-1" side="top" align="start">
-                <DropdownMenuItem className="rounded-lg focus:bg-accent focus:text-white font-semibold p-2.5">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <Link href="/login" className="w-full">Cerrar Sesión</Link>
+                <DropdownMenuItem className="rounded-lg focus:bg-accent focus:text-white font-semibold p-2.5" asChild>
+                  <Link href="/login" className="w-full flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Cerrar Sesión
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
