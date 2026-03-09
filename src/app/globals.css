@@ -4,50 +4,50 @@
 
 @layer base {
   :root {
-    /* Paleta Luxury ELAPIEL - Light Mode */
-    --background: 278 20% 99%;
-    --foreground: 278 50% 10%;
+    /* Paleta Luxury ELAPIEL - Refined Light Mode */
+    --background: 278 35% 98.5%; /* Softest lavender white */
+    --foreground: 278 60% 4%; /* Deep royal purple */
     
     --card: 0 0% 100%;
-    --card-foreground: 278 50% 10%;
+    --card-foreground: 278 60% 4%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 278 50% 10%;
+    --popover-foreground: 278 60% 4%;
     
-    --primary: 278 45% 18%; /* Deep Royal Purple */
-    --primary-foreground: 0 0% 98%;
+    --primary: 278 55% 15%; /* Deep Royal Purple */
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 278 25% 96%;
-    --secondary-foreground: 278 45% 25%;
+    --secondary: 278 30% 95%;
+    --secondary-foreground: 278 55% 20%;
     
-    --muted: 278 15% 94%;
-    --muted-foreground: 278 10% 45%;
+    --muted: 278 20% 92%;
+    --muted-foreground: 278 15% 40%;
     
-    --accent: 337 80% 50%; /* Lux Rose Accent */
-    --accent-foreground: 0 0% 98%;
+    --accent: 337 85% 52%; /* Lux Rose Accent */
+    --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     
-    --border: 278 20% 92%;
-    --input: 278 20% 92%;
-    --ring: 337 80% 50%;
+    --border: 278 25% 90%;
+    --input: 278 25% 90%;
+    --ring: 337 85% 52%;
     
-    --radius: 1.25rem;
+    --radius: 1.5rem;
 
-    /* Sidebar - Paleta Intensa */
-    --sidebar-background: 278 45% 12%;
-    --sidebar-foreground: 278 20% 90%;
-    --sidebar-primary: 337 80% 50%;
+    /* Sidebar - Mantains deep contrast for Luxury feel */
+    --sidebar-background: 278 50% 8%;
+    --sidebar-foreground: 278 20% 94%;
+    --sidebar-primary: 337 85% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 278 45% 20%;
+    --sidebar-accent: 278 50% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 278 45% 18%;
-    --sidebar-ring: 337 80% 50%;
+    --sidebar-border: 278 50% 12%;
+    --sidebar-ring: 337 85% 52%;
   }
 
   .dark {
-    /* Paleta Luxury ELAPIEL - Dark Mode */
+    /* Kept for system preference compatibility, but default is light */
     --background: 278 45% 4%;
     --foreground: 278 15% 96%;
     
@@ -75,15 +75,6 @@
     --border: 278 35% 16%;
     --input: 278 35% 16%;
     --ring: 337 85% 60%;
-
-    --sidebar-background: 278 60% 3%;
-    --sidebar-foreground: 278 15% 92%;
-    --sidebar-primary: 337 85% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 278 60% 8%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 278 60% 7%;
-    --sidebar-ring: 337 85% 60%;
   }
 }
 
@@ -92,35 +83,38 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased selection:bg-accent/30;
+    @apply bg-background text-foreground font-body antialiased selection:bg-accent/20;
   }
 }
 
 /* Luxury Utilities */
 .glass-card {
-  @apply bg-card/60 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(48,25,52,0.08)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.4)];
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(48,25,52,0.04)] transition-all duration-500 hover:shadow-[0_8px_32px_0_rgba(48,25,52,0.08)];
 }
 
 .btn-elegant {
-  @apply transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-accent/30 bg-gradient-to-r from-accent to-accent/80 text-white border-none;
+  @apply transition-all duration-500 hover:scale-[1.03] active:scale-[0.97] shadow-lg hover:shadow-accent/40 bg-gradient-to-r from-accent to-accent/80 text-white border-none font-bold tracking-tight;
 }
 
 .font-headline {
   @apply tracking-tight font-bold;
 }
 
-/* Luxury Gradients */
+/* Luxury Mesh Background */
 .bg-mesh {
-  background-image: radial-gradient(at 0% 0%, hsla(278, 45%, 15%, 0.05) 0, transparent 50%),
-                    radial-gradient(at 50% 0%, hsla(337, 85%, 47%, 0.05) 0, transparent 50%);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(278, 60%, 80%, 0.15) 0, transparent 40%),
+    radial-gradient(at 100% 0%, hsla(337, 85%, 70%, 0.1) 0, transparent 40%),
+    radial-gradient(at 100% 100%, hsla(278, 60%, 85%, 0.1) 0, transparent 40%),
+    radial-gradient(at 0% 100%, hsla(337, 85%, 70%, 0.1) 0, transparent 40%);
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(15px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
