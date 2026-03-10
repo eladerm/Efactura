@@ -24,7 +24,7 @@ function getDummyInvoiceData(comprador?: { nombre: string, doc: string }) {
         tipoEmision: "1",
         razonSocial: "ELAPIEL S.A. (Pruebas)",
         nombreComercial: "Elapiel eFactura (Pruebas)",
-        ruc: "1725885485001", // Reemplazar con RUC real para pruebas
+        ruc: "1725885485001", // RUC de prueba para ELAPIEL
         claveAcceso: "",
         codDoc: "01",
         estab: "001",
@@ -45,7 +45,7 @@ function getDummyInvoiceData(comprador?: { nombre: string, doc: string }) {
         totalConImpuestos: {
             totalImpuesto: [{
                 codigo: '2',
-                codigoPorcentaje: '0', // 0% para pruebas
+                codigoPorcentaje: '0', // 0% para pruebas iniciales
                 baseImponible: 10.00,
                 valor: 0.00,
             }]
@@ -59,7 +59,7 @@ function getDummyInvoiceData(comprador?: { nombre: string, doc: string }) {
     const detalles = {
         detalle: [{
             codigoPrincipal: 'TEST-001',
-            descripcion: 'Producto de Prueba',
+            descripcion: 'Producto de Prueba ELAPIEL',
             cantidad: 1,
             precioUnitario: 10.00,
             descuento: 0,
@@ -84,7 +84,7 @@ async function signDummyXml(unsignedXml: string, customUrl?: string, customPass?
     const p12Password = customPass || process.env.P12_PASSWORD;
 
     if (!p12Url || !p12Password) {
-        throw new Error("Faltan credenciales P12 (URL o Contraseña).");
+        throw new Error("Faltan credenciales P12 (URL o Contraseña). Configúralas en la página de Configuración.");
     }
     const p12Buffer = await getP12FromUrl(p12Url);
     return signXml(p12Buffer, p12Password, unsignedXml);
@@ -117,7 +117,7 @@ export async function sriPingTest() {
 export async function checkP12Test(url?: string) {
     const p12Url = url || process.env.P12_URL;
     if (!p12Url) {
-        return { ok: false, error: "La URL del certificado P12 no está configurada (ni en variables ni manual)." };
+        return { ok: false, error: "La URL del certificado P12 no está configurada." };
     }
     try {
         const p12Buffer = await getP12FromUrl(p12Url);
@@ -132,7 +132,7 @@ export async function testP12SecretTest(pass?: string) {
     if (!p12Password) {
         return { ok: false, error: "La contraseña del P12 no está configurada." };
     }
-    return { ok: true, message: "La contraseña está presente." };
+    return { ok: true, message: "La contraseña está presente y lista para usar." };
 }
 
 export async function signXmlTest(url?: string, pass?: string) {
@@ -170,13 +170,11 @@ export async function sriSendTest(body: { xmlB64: string, p12Url?: string, p12Pa
         const receptionResult = await documentReception(signedXml, sriTestEndpoints.reception);
 
         if (receptionResult.estado !== 'RECIBIDA') {
-            console.error("SRI Send Error:", receptionResult);
              return { ok: false, error: `El SRI no recibió la factura. Estado: ${receptionResult.estado}`, sri_response: receptionResult };
         }
         
         return { ok: true, sri_response: receptionResult };
     } catch (e: any) {
-        console.error("sriSendTest Error:", e);
         return { ok: false, error: e.message };
     }
 }
@@ -189,13 +187,11 @@ export async function sriAuthorizeTest(body: { claveAcceso: string }) {
         const auth = authorizationResult.autorizaciones?.autorizacion?.[0];
 
         if (!auth || auth.estado !== 'AUTORIZADO') {
-            console.error("SRI Auth Error:", authorizationResult);
              return { ok: false, error: `La factura no fue autorizada. Estado: ${auth?.estado || 'DESCONOCIDO'}`, sri_response: authorizationResult };
         }
         
         return { ok: true, sri_response: authorizationResult };
     } catch (e: any) {
-        console.error("sriAuthorizeTest Error:", e);
         return { ok: false, error: e.message };
     }
 }

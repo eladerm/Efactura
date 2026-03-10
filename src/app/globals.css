@@ -4,9 +4,9 @@
 
 @layer base {
   :root {
-    /* Paleta Luxury ELAPIEL - Ultra Light & Elegant */
-    --background: 278 40% 99%; /* Blanco con un toque de frescura lavanda */
-    --foreground: 278 50% 15%; /* Púrpura profundo para texto, muy legible */
+    /* Paleta Luxury ELAPIEL - Estilo Claro, Aireado y Elegante */
+    --background: 278 40% 99%; /* Blanco lavanda muy sutil */
+    --foreground: 278 50% 15%; /* Púrpura profundo para texto */
     
     --card: 0 0% 100%;
     --card-foreground: 278 50% 15%;
@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 278 50% 15%;
     
-    --primary: 278 60% 25%; /* Púrpura ELAPIEL elegante */
+    --primary: 278 60% 25%; /* Púrpura Real ELAPIEL */
     --primary-foreground: 0 0% 100%;
     
     --secondary: 278 30% 96%;
@@ -35,7 +35,7 @@
     
     --radius: 1.25rem;
 
-    /* Sidebar - Ahora en tonos claros y suaves */
+    /* Sidebar - Tonos claros y elegantes */
     --sidebar-background: 278 30% 97%;
     --sidebar-foreground: 278 50% 20%;
     --sidebar-primary: 337 85% 52%;
@@ -60,7 +60,7 @@
   }
 }
 
-/* Luxury Utilities */
+/* Clases de Lujo ELAPIEL */
 .glass-card {
   @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-[0_4px_24px_rgba(224,17,95,0.04)] transition-all duration-300;
 }
