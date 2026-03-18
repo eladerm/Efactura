@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de Cálculo WebGL</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background: #f0f0f0; }
+
+#toolbar {
+  display: flex; align-items: center; height: 36px; background: #217346; color: #fff;
+  padding: 0 8px; gap: 4px; z-index: 100; user-select: none;
+}
+#toolbar button {
+  background: rgba(255,255,255,0.15); border: none; color: #fff; padding: 4px 10px;
+  border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap;
+}
+#toolbar button:hover { background: rgba(255,255,255,0.3); }
+#toolbar .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.3); margin: 0 4px; }
+
+#formula-bar {
+  display: flex; align-items: center; height: 28px; background: #fff;
+  border-bottom: 1px solid #ccc; z-index: 100;
+}
+#cell-ref {
+  width: 70px; text-align: center; border-right: 1px solid #ccc; font-size: 12px;
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  background: #f8f8f8; font-weight: 500; color: #333;
+}
+#formula-input {
+  flex: 1; border: none; outline: none; padding: 0 8px; font-size: 13px; height: 100%;
+}
+#freeze-toggle {
+  padding: 2px 8px; font-size: 11px; cursor: pointer; background: #f0f0f0;
+  border: 1px solid #ccc; border-radius: 3px; margin-right: 4px; color: #333;
+}
+
+#spreadsheet-container {
+  position: relative; width: 100vw; height: calc(100vh - 64px); overflow: hidden;
+  cursor: cell;
+}
+#webgl-canvas { position: absolute; top: 0; left: 0; }
+
+/* Cell editor overlay */
+#cell-editor {
+  position: absolute; display: none; z-index: 50; border: 2px solid #217346;
+  outline: none; font-size: 13px; font-family: 'Segoe UI', sans-serif;
+  padding: 1px 3px; background: #fff; resize: none; overflow: hidden;
+  min-width: 20px; min-height: 16px;
+}
+
+/* Scrollbars */
+#scrollbar-v {
+  position: absolute; right: 0; top: 0; width: 14px; height: 100%;
+  background: #f0f0f0; z-index: 60;
+}
+#scrollbar-v-thumb {
+  position: absolute; width: 10px; left: 2px; background: #888; border-radius: 5px;
+  min-height: 30px; cursor: pointer;
+}
+#scrollbar-h {
+  position: absolute; bottom: 0; left: 0; width: calc(100% - 14px); height: 14px;
+  background: #f0f0f0; z-index: 60;
+}
+#scrollbar-h-thumb {
+  position: absolute; height: 10px; top: 2px; background: #888; border-radius: 5px;
+  min-width: 30px; cursor: pointer;
+}
+#scrollbar-v-thumb:hover, #scrollbar-h-thumb:hover { background: #666; }
+
+/* Status bar */
+#status-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 22px; background: #217346;
+  color: #fff; font-size: 11px; display: flex; align-items: center; padding: 0 12px;
+  z-index: 100; justify-content: space-between;
+}
+
+/* Hidden file input */
+#csv-file-input { display: none; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button onclick="spreadsheet.newSheet()" title="Nuevo">Nuevo</button>
+  <button onclick="spreadsheet.save()" title="Guardar">Guardar</button>
+  <button onclick="spreadsheet.load()" title="Cargar">Cargar</button>
+  <div class="sep"></div>
+  <button onclick="spreadsheet.exportCSV()" title="Exportar CSV">Exportar CSV</button>
+  <button onclick="document.getElementById('csv-file-input').click()" title="Importar CSV">Importar CSV</button>
+  <div class="sep"></div>
+  <button onclick="spreadsheet.undo()" title="Deshacer (Ctrl+Z)">Deshacer</button>
+  <button onclick="spreadsheet.redo()" title="Rehacer (Ctrl+Y)">Rehacer</button>
+</div>
+
+<div id="formula-bar">
+  <div id="cell-ref">A1</div>
+  <input id="formula-input" type="text" spellcheck="false" />
+  <button id="freeze-toggle" onclick="spreadsheet.toggleFreeze()">Congelar</button>
+</div>
+
+<div id="spreadsheet-container">
+  <canvas id="webgl-canvas"></canvas>
+  <textarea id="cell-editor"></textarea>
+  <div id="scrollbar-v"><div id="scrollbar-v-thumb"></div></div>
+  <div id="scrollbar-h"><div id="scrollbar-h-thumb"></div></div>
+</div>
+
+<div id="status-bar">
+  <span id="status-left">Listo</span>
+  <span id="status-right"></span>
+</div>
+
+<input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" />
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ──────────────────────────── Data Model ────────────────────────────
+class CellData {
+  constructor() { this.raw = ''; this.value = ''; this.type = 'text'; this.format = null; }
+}
+
+class DataModel {
+  constructor() {
+    this.cells = new Map();
+    this.totalRows = 1000;
+    this.totalCols = 200;
+  }
+
+  key(r, c) { return `${r},${c}`; }
+
+  getCell(r, c) { return this.cells.get(this.key(r, c)) || null; }
+
+  setCell(r, c, raw) {
+    const k = this.key(r, c);
+    let cell = this.cells.get(k);
+    if (!cell) { cell = new CellData(); this.cells.set(k, cell); }
+    cell.raw = raw;
+    this.evaluateCell(r, c, cell);
+    return cell;
+  }
+
+  deleteCell(r, c) { this.cells.delete(this.key(r, c)); }
+
+  evaluateCell(r, c, cell) {
+    if (!cell) return;
+    const raw = cell.raw;
+    if (raw === '' || raw == null) { cell.value = ''; cell.type = 'text'; return; }
+    if (typeof raw === 'string' && raw.startsWith('=')) {
+      try {
+        cell.value = this.evalFormula(raw.substring(1), r, c);
+        cell.type = typeof cell.value === 'number' ? 'number' : 'text';
+      } catch (e) {
+        cell.value = e.message && e.message.startsWith('#') ? e.message : '#ERROR';
+        cell.type = 'error';
+      }
+    } else {
+      const n = Number(raw);
+      if (raw !== '' && !isNaN(n) && isFinite(n)) {
+        cell.value = n; cell.type = 'number';
+      } else {
+        cell.value = raw; cell.type = 'text';
+      }
+    }
+  }
+
+  evalFormula(expr, srcRow, srcCol) {
+    const upper = expr.toUpperCase().trim();
+    // Handle function calls: SUM, AVERAGE, MIN, MAX, COUNT, IF
+    const funcMatch = upper.match(/^(SUM|AVERAGE|AVG|MIN|MAX|COUNT|COUNTA|IF)\s*\((.+)\)$/);
+    if (funcMatch) {
+      const fn = funcMatch[1];
+      const args = funcMatch[2];
+      if (fn === 'IF') return this.evalIf(args, srcRow, srcCol);
+      const values = this.resolveRange(args, srcRow, srcCol);
+      const nums = values.filter(v => typeof v === 'number');
+      switch (fn) {
+        case 'SUM': return nums.reduce((a, b) => a + b, 0);
+        case 'AVERAGE': case 'AVG':
+          if (nums.length === 0) throw new Error('#VALUE!');
+          return nums.reduce((a, b) => a + b, 0) / nums.length;
+        case 'MIN': return nums.length ? Math.min(...nums) : 0;
+        case 'MAX': return nums.length ? Math.max(...nums) : 0;
+        case 'COUNT': return nums.length;
+        case 'COUNTA': return values.filter(v => v !== '' && v != null).length;
+      }
+    }
+    // Simple cell reference or arithmetic
+    return this.evalExpr(upper, srcRow, srcCol);
+  }
+
+  evalIf(argsStr, srcRow, srcCol) {
+    // Split top-level commas
+    const parts = this.splitArgs(argsStr);
+    if (parts.length < 2) throw new Error('#VALUE!');
+    const cond = this.evalExpr(parts[0].trim(), srcRow, srcCol);
+    if (cond) {
+      return parts.length > 1 ? this.evalExpr(parts[1].trim(), srcRow, srcCol) : true;
+    } else {
+      return parts.length > 2 ? this.evalExpr(parts[2].trim(), srcRow, srcCol) : false;
+    }
+  }
+
+  splitArgs(s) {
+    const parts = []; let depth = 0; let cur = '';
+    for (const ch of s) {
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { parts.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    parts.push(cur);
+    return parts;
+  }
+
+  resolveRange(args, srcRow, srcCol) {
+    const parts = this.splitArgs(args);
+    const values = [];
+    for (const part of parts) {
+      const p = part.trim();
+      const rangeMatch = p.match(/^([A-Z]+\d+):([A-Z]+\d+)$/);
+      if (rangeMatch) {
+        const [r1, c1] = this.parseRef(rangeMatch[1]);
+        const [r2, c2] = this.parseRef(rangeMatch[2]);
+        for (let r = Math.min(r1, r2); r <= Math.max(r1, r2); r++) {
+          for (let c = Math.min(c1, c2); c <= Math.max(c1, c2); c++) {
+            const cell = this.getCell(r, c);
+            if (cell) values.push(cell.value);
+          }
+        }
+      } else {
+        values.push(this.evalExpr(p, srcRow, srcCol));
+      }
+    }
+    return values;
+  }
+
+  evalExpr(expr, srcRow, srcCol) {
+    let e = expr.trim();
+    // Replace cell references with values
+    e = e.replace(/\b([A-Z]+)(\d+)\b/g, (match, col, row) => {
+      const [r, c] = this.parseRef(match);
+      if (r === srcRow && c === srcCol) throw new Error('#REF!');
+      const cell = this.getCell(r, c);
+      if (!cell || cell.value === '') return '0';
+      if (cell.type === 'error') throw new Error(cell.value);
+      if (typeof cell.value === 'number') return cell.value;
+      const n = Number(cell.value);
+      return isNaN(n) ? `"${cell.value}"` : n;
+    });
+    // Handle string literals
+    if (e.startsWith('"') && e.endsWith('"')) return e.slice(1, -1);
+    // Safe eval for arithmetic
+    try {
+      // Only allow numbers, operators, parens, comparisons
+      if (/^[\d\s+\-*/().%<>=!&|"]+$/.test(e)) {
+        e = e.replace(/=/g, '==').replace(/<==/g, '<=').replace(/>==/g, '>=').replace(/!==/g, '!=').replace(/<>/g, '!=');
+        return Function(`"use strict"; return (${e})`)();
+      }
+      const n = Number(e);
+      if (!isNaN(n)) return n;
+      return e.replace(/"/g, '');
+    } catch { throw new Error('#VALUE!'); }
+  }
+
+  parseRef(ref) {
+    const match = ref.match(/^([A-Z]+)(\d+)$/);
+    if (!match) throw new Error('#REF!');
+    let col = 0;
+    for (const ch of match[1]) col = col * 26 + (ch.charCodeAt(0) - 64);
+    return [parseInt(match[2]) - 1, col - 1];
+  }
+
+  recalcAll() {
+    for (const [k, cell] of this.cells) {
+      const [r, c] = k.split(',').map(Number);
+      this.evaluateCell(r, c, cell);
+    }
+  }
+}
+
+// ──────────────────────── Column/Row helpers ────────────────────────
+function colLabel(c) {
+  let s = '';
+  let n = c + 1;
+  while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); }
+  return s;
+}
+
+// ──────────────────────── Undo/Redo ─────────────────────────────────
+class UndoManager {
+  constructor() { this.undoStack = []; this.redoStack = []; }
+  push(action) { this.undoStack.push(action); this.redoStack = []; }
+  undo() { if (!this.undoStack.length) return null; const a = this.undoStack.pop(); this.redoStack.push(a); return a; }
+  redo() { if (!this.redoStack.length) return null; const a = this.redoStack.pop(); this.undoStack.push(a); return a; }
+}
+
+// ──────────────────────── Spreadsheet ───────────────────────────────
+class Spreadsheet {
+  constructor() {
+    this.model = new DataModel();
+    this.undoMgr = new UndoManager();
+
+    // Dimensions
+    this.colWidths = new Float32Array(this.model.totalCols).fill(80);
+    this.rowHeights = new Float32Array(this.model.totalRows).fill(22);
+    this.headerWidth = 45;
+    this.headerHeight = 22;
+
+    // Viewport
+    this.scrollX = 0;
+    this.scrollY = 0;
+    this.zoom = 1;
+    this.minZoom = 0.3;
+    this.maxZoom = 3;
+
+    // Selection
+    this.selRow = 0;
+    this.selCol = 0;
+    this.selEndRow = 0;
+    this.selEndCol = 0;
+    this.selecting = false;
+
+    // Editing
+    this.editing = false;
+
+    // Freeze
+    this.freezeRow = false;
+    this.freezeCol = false;
+
+    // Resize tracking
+    this.resizing = null; // { type: 'col'|'row', index, startPos, startSize }
+
+    // Autofill
+    this.autofilling = false;
+    this.autofillStart = null;
+    this.autofillEnd = null;
+
+    // Inertia scroll
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.lastScrollTime = 0;
+
+    // DOM refs
+    this.container = document.getElementById('spreadsheet-container');
+    this.canvas = document.getElementById('webgl-canvas');
+    this.cellEditor = document.getElementById('cell-editor');
+    this.formulaInput = document.getElementById('formula-input');
+    this.cellRefEl = document.getElementById('cell-ref');
+    this.statusLeft = document.getElementById('status-left');
+    this.statusRight = document.getElementById('status-right');
+
+    // Three.js
+    this.initThree();
+    this.initEvents();
+    this.resize();
+    this.updateCellRef();
+    this.render();
+  }
+
+  // ───────────── Three.js Setup ─────────────
+  initThree() {
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, alpha: false });
+    this.renderer.setClearColor(0xffffff);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.OrthographicCamera(0, 1, 0, 1, -1, 1);
+
+    // We draw everything onto a single canvas texture each frame (hybrid approach)
+    this.drawCanvas = document.createElement('canvas');
+    this.drawCtx = this.drawCanvas.getContext('2d');
+
+    this.texture = new THREE.CanvasTexture(this.drawCanvas);
+    this.texture.minFilter = THREE.LinearFilter;
+    this.texture.magFilter = THREE.LinearFilter;
+
+    const geo = new THREE.PlaneGeometry(2, 2);
+    const mat = new THREE.MeshBasicMaterial({ map: this.texture });
+    this.quad = new THREE.Mesh(geo, mat);
+    this.scene.add(this.quad);
+
+    this.camera.position.z = 0;
+    this.camera.left = -1; this.camera.right = 1;
+    this.camera.top = 1; this.camera.bottom = -1;
+    this.camera.updateProjectionMatrix();
+  }
+
+  resize() {
+    const w = this.container.clientWidth;
+    const h = this.container.clientHeight;
+    this.width = w;
+    this.height = h;
+    this.renderer.setSize(w, h);
+
+    const dpr = window.devicePixelRatio;
+    this.drawCanvas.width = w * dpr;
+    this.drawCanvas.height = h * dpr;
+    this.drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    this.needsRender = true;
+  }
+
+  // ───────────── Coordinate helpers ─────────────
+  getColX(c) {
+    let x = this.headerWidth;
+    for (let i = 0; i < c; i++) x += this.colWidths[i] * this.zoom;
+    return x - this.scrollX;
+  }
+
+  getRowY(r) {
+    let y = this.headerHeight;
+    for (let i = 0; i < r; i++) y += this.rowHeights[i] * this.zoom;
+    return y - this.scrollY;
+  }
+
+  getColW(c) { return this.colWidths[c] * this.zoom; }
+  getRowH(r) { return this.rowHeights[r] * this.zoom; }
+
+  // Find column at pixel x
+  colAtX(px) {
+    let x = this.headerWidth - this.scrollX;
+    for (let c = 0; c < this.model.totalCols; c++) {
+      const w = this.colWidths[c] * this.zoom;
+      if (px < x + w) return c;
+      x += w;
+    }
+    return this.model.totalCols - 1;
+  }
+
+  // Find row at pixel y
+  rowAtY(py) {
+    let y = this.headerHeight - this.scrollY;
+    for (let r = 0; r < this.model.totalRows; r++) {
+      const h = this.rowHeights[r] * this.zoom;
+      if (py < y + h) return r;
+      y += h;
+    }
+    return this.model.totalRows - 1;
+  }
+
+  // Visible range
+  visibleRange() {
+    let startCol = 0, startRow = 0;
+    let x = this.headerWidth - this.scrollX;
+    for (let c = 0; c < this.model.totalCols; c++) {
+      const w = this.colWidths[c] * this.zoom;
+      if (x + w > this.headerWidth) { startCol = c; break; }
+      x += w;
+    }
+    let y = this.headerHeight - this.scrollY;
+    for (let r = 0; r < this.model.totalRows; r++) {
+      const h = this.rowHeights[r] * this.zoom;
+      if (y + h > this.headerHeight) { startRow = r; break; }
+      y += h;
+    }
+    let endCol = startCol, endRow = startRow;
+    x = this.getColX(startCol);
+    for (let c = startCol; c < this.model.totalCols; c++) {
+      if (x > this.width) break;
+      endCol = c;
+      x += this.colWidths[c] * this.zoom;
+    }
+    y = this.getRowY(startRow);
+    for (let r = startRow; r < this.model.totalRows; r++) {
+      if (y > this.height) break;
+      endRow = r;
+      y += this.rowHeights[r] * this.zoom;
+    }
+    return { startRow, startCol, endRow: endRow + 1, endCol: endCol + 1 };
+  }
+
+  // Total content size
+  totalWidth() {
+    let w = 0;
+    for (let i = 0; i < this.model.totalCols; i++) w += this.colWidths[i] * this.zoom;
+    return w;
+  }
+
+  totalHeight() {
+    let h = 0;
+    for (let i = 0; i < this.model.totalRows; i++) h += this.rowHeights[i] * this.zoom;
+    return h;
+  }
+
+  maxScrollX() { return Math.max(0, this.totalWidth() - (this.width - this.headerWidth)); }
+  maxScrollY() { return Math.max(0, this.totalHeight() - (this.height - this.headerHeight)); }
+
+  clampScroll() {
+    this.scrollX = Math.max(0, Math.min(this.scrollX, this.maxScrollX()));
+    this.scrollY = Math.max(0, Math.min(this.scrollY, this.maxScrollY()));
+  }
+
+  // ───────────── Drawing (Canvas 2D → Texture) ─────────────
+  drawFrame() {
+    const ctx = this.drawCtx;
+    const W = this.width;
+    const H = this.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const { startRow, startCol, endRow, endCol } = this.visibleRange();
+    const fontSize = Math.max(8, Math.round(12 * this.zoom));
+
+    // Draw cell grid
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(this.headerWidth, this.headerHeight, W - this.headerWidth - 14, H - this.headerHeight - 14);
+    ctx.clip();
+
+    // Cell backgrounds & grid lines
+    for (let r = startRow; r < endRow; r++) {
+      const y = this.getRowY(r);
+      const h = this.getRowH(r);
+      if (y + h < this.headerHeight || y > H) continue;
+      for (let c = startCol; c < endCol; c++) {
+        const x = this.getColX(c);
+        const w = this.getColW(c);
+        if (x + w < this.headerWidth || x > W) continue;
+
+        // Background
+        const inSel = this.inSelection(r, c);
+        if (inSel && !(r === this.selRow && c === this.selCol)) {
+          ctx.fillStyle = 'rgba(33,115,70,0.12)';
+          ctx.fillRect(x, y, w, h);
+        } else {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x, y, w, h);
+        }
+
+        // Grid line
+        ctx.strokeStyle = '#e2e2e2';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x, y, w, h);
+
+        // Cell text
+        const cell = this.model.getCell(r, c);
+        if (cell && cell.value !== '' && cell.value != null) {
+          ctx.font = `${fontSize}px 'Segoe UI', sans-serif`;
+          const text = String(cell.value);
+          const maxW = w - 6;
+
+          if (cell.type === 'error') {
+            ctx.fillStyle = '#d32f2f';
+          } else if (cell.type === 'number') {
+            ctx.fillStyle = '#1a1a2e';
+          } else {
+            ctx.fillStyle = '#1a1a1a';
+          }
+
+          ctx.textBaseline = 'middle';
+          if (cell.type === 'number') {
+            ctx.textAlign = 'right';
+            ctx.fillText(text, x + w - 4, y + h / 2, maxW);
+          } else {
+            ctx.textAlign = 'left';
+            ctx.fillText(text, x + 4, y + h / 2, maxW);
+          }
+        }
+      }
+    }
+
+    // Selection border
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+
+    const selX = this.getColX(sc1);
+    const selY = this.getRowY(sr1);
+    let selW = 0, selH = 0;
+    for (let c = sc1; c <= sc2; c++) selW += this.getColW(c);
+    for (let r = sr1; r <= sr2; r++) selH += this.getRowH(r);
+
+    ctx.strokeStyle = '#217346';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(selX, selY, selW, selH);
+
+    // Active cell thicker border
+    if (sr1 !== sr2 || sc1 !== sc2) {
+      const ax = this.getColX(this.selCol);
+      const ay = this.getRowY(this.selRow);
+      ctx.strokeStyle = '#217346';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ax + 1, ay + 1, this.getColW(this.selCol) - 2, this.getRowH(this.selRow) - 2);
+    }
+
+    // Autofill handle (small square at bottom-right of selection)
+    if (!this.editing) {
+      const hx = selX + selW - 4;
+      const hy = selY + selH - 4;
+      ctx.fillStyle = '#217346';
+      ctx.fillRect(hx, hy, 7, 7);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(hx, hy, 7, 7);
+    }
+
+    // Autofill highlight
+    if (this.autofilling && this.autofillEnd) {
+      const afr1 = Math.min(sr1, this.autofillEnd.row);
+      const afr2 = Math.max(sr2, this.autofillEnd.row);
+      const afc1 = sc1, afc2 = sc2;
+      const afx = this.getColX(afc1);
+      const afy = this.getRowY(afr1);
+      let afw = 0, afh = 0;
+      for (let c = afc1; c <= afc2; c++) afw += this.getColW(c);
+      for (let r = afr1; r <= afr2; r++) afh += this.getRowH(r);
+      ctx.strokeStyle = '#217346';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(afx, afy, afw, afh);
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+
+    // Column headers
+    ctx.fillStyle = '#f8f8f8';
+    ctx.fillRect(0, 0, W, this.headerHeight);
+    ctx.fillRect(0, 0, this.headerWidth, H);
+
+    // Corner
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(0, 0, this.headerWidth, this.headerHeight);
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, this.headerWidth, this.headerHeight);
+
+    ctx.font = `bold ${Math.max(9, Math.round(11 * this.zoom))}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Column headers
+    for (let c = startCol; c < endCol; c++) {
+      const x = this.getColX(c);
+      const w = this.getColW(c);
+      if (x + w < this.headerWidth || x > W) continue;
+
+      const inSel = c >= sc1 && c <= sc2;
+      ctx.fillStyle = inSel ? '#217346' : '#f8f8f8';
+      ctx.fillRect(x, 0, w, this.headerHeight);
+      ctx.strokeStyle = '#ccc';
+      ctx.strokeRect(x, 0, w, this.headerHeight);
+      ctx.fillStyle = inSel ? '#fff' : '#555';
+      ctx.fillText(colLabel(c), x + w / 2, this.headerHeight / 2, w - 4);
+    }
+
+    // Row headers
+    for (let r = startRow; r < endRow; r++) {
+      const y = this.getRowY(r);
+      const h = this.getRowH(r);
+      if (y + h < this.headerHeight || y > H) continue;
+
+      const inSel = r >= sr1 && r <= sr2;
+      ctx.fillStyle = inSel ? '#217346' : '#f8f8f8';
+      ctx.fillRect(0, y, this.headerWidth, h);
+      ctx.strokeStyle = '#ccc';
+      ctx.strokeRect(0, y, this.headerWidth, h);
+      ctx.fillStyle = inSel ? '#fff' : '#555';
+      ctx.fillText(String(r + 1), this.headerWidth / 2, y + h / 2, this.headerWidth - 4);
+    }
+
+    // Frozen pane lines
+    if (this.freezeRow) {
+      const fy = this.getRowY(1);
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, fy);
+      ctx.lineTo(W, fy);
+      ctx.stroke();
+    }
+    if (this.freezeCol) {
+      const fx = this.getColX(1);
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fx, 0);
+      ctx.lineTo(fx, H);
+      ctx.stroke();
+    }
+
+    // Update texture
+    this.texture.needsUpdate = true;
+  }
+
+  inSelection(r, c) {
+    const r1 = Math.min(this.selRow, this.selEndRow);
+    const r2 = Math.max(this.selRow, this.selEndRow);
+    const c1 = Math.min(this.selCol, this.selEndCol);
+    const c2 = Math.max(this.selCol, this.selEndCol);
+    return r >= r1 && r <= r2 && c >= c1 && c <= c2;
+  }
+
+  render() {
+    this.drawFrame();
+    this.renderer.render(this.scene, this.camera);
+    this.updateScrollbars();
+  }
+
+  // Animation loop with inertia
+  animate() {
+    if (Math.abs(this.velocityX) > 0.5 || Math.abs(this.velocityY) > 0.5) {
+      this.scrollX += this.velocityX;
+      this.scrollY += this.velocityY;
+      this.velocityX *= 0.92;
+      this.velocityY *= 0.92;
+      this.clampScroll();
+      this.needsRender = true;
+    } else {
+      this.velocityX = 0;
+      this.velocityY = 0;
+    }
+
+    if (this.needsRender) {
+      this.render();
+      this.needsRender = false;
+    }
+
+    requestAnimationFrame(() => this.animate());
+  }
+
+  // ───────────── Scrollbars ─────────────
+  updateScrollbars() {
+    const vThumb = document.getElementById('scrollbar-v-thumb');
+    const hThumb = document.getElementById('scrollbar-h-thumb');
+    const vTrack = this.height - 14;
+    const hTrack = this.width - 14 - 14;
+
+    const th = this.totalHeight();
+    const tw = this.totalWidth();
+    const viewH = this.height - this.headerHeight;
+    const viewW = this.width - this.headerWidth;
+
+    const vRatio = Math.min(1, viewH / th);
+    const hRatio = Math.min(1, viewW / tw);
+
+    const vThumbH = Math.max(30, vRatio * vTrack);
+    const hThumbW = Math.max(30, hRatio * hTrack);
+
+    const maxSY = this.maxScrollY();
+    const maxSX = this.maxScrollX();
+
+    const vTop = maxSY > 0 ? (this.scrollY / maxSY) * (vTrack - vThumbH) : 0;
+    const hLeft = maxSX > 0 ? (this.scrollX / maxSX) * (hTrack - hThumbW) : 0;
+
+    vThumb.style.height = vThumbH + 'px';
+    vThumb.style.top = vTop + 'px';
+    hThumb.style.width = hThumbW + 'px';
+    hThumb.style.left = hLeft + 'px';
+  }
+
+  // ───────────── Events ─────────────
+  initEvents() {
+    window.addEventListener('resize', () => { this.resize(); this.needsRender = true; });
+
+    // Mouse events on container
+    this.container.addEventListener('mousedown', (e) => this.onMouseDown(e));
+    window.addEventListener('mousemove', (e) => this.onMouseMove(e));
+    window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+    this.container.addEventListener('dblclick', (e) => this.onDblClick(e));
+    this.container.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+
+    // Touch support
+    this.container.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+    this.container.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+    this.container.addEventListener('touchend', (e) => this.onTouchEnd(e));
+
+    // Keyboard
+    window.addEventListener('keydown', (e) => this.onKeyDown(e));
+
+    // Formula bar
+    this.formulaInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { this.commitFormulaBar(); e.preventDefault(); }
+      if (e.key === 'Escape') { this.formulaInput.value = this.getCellRaw(); this.formulaInput.blur(); }
+    });
+    this.formulaInput.addEventListener('change', () => this.commitFormulaBar());
+
+    // Cell editor
+    this.cellEditor.addEventListener('keydown', (e) => this.onEditorKeyDown(e));
+    this.cellEditor.addEventListener('blur', () => { if (this.editing) this.commitEdit(); });
+
+    // CSV import
+    document.getElementById('csv-file-input').addEventListener('change', (e) => this.importCSV(e));
+
+    // Scrollbar dragging
+    this.initScrollbarDrag();
+
+    // Start animation loop
+    this.animate();
+  }
+
+  initScrollbarDrag() {
+    const vThumb = document.getElementById('scrollbar-v-thumb');
+    const hThumb = document.getElementById('scrollbar-h-thumb');
+    let dragging = null;
+
+    const onMove = (e) => {
+      if (!dragging) return;
+      if (dragging.type === 'v') {
+        const vTrack = this.height - 14;
+        const thumbH = vThumb.offsetHeight;
+        const maxTop = vTrack - thumbH;
+        const dy = e.clientY - dragging.startMouse;
+        const top = Math.max(0, Math.min(maxTop, dragging.startPos + dy));
+        const ratio = maxTop > 0 ? top / maxTop : 0;
+        this.scrollY = ratio * this.maxScrollY();
+      } else {
+        const hTrack = this.width - 28;
+        const thumbW = hThumb.offsetWidth;
+        const maxLeft = hTrack - thumbW;
+        const dx = e.clientX - dragging.startMouse;
+        const left = Math.max(0, Math.min(maxLeft, dragging.startPos + dx));
+        const ratio = maxLeft > 0 ? left / maxLeft : 0;
+        this.scrollX = ratio * this.maxScrollX();
+      }
+      this.clampScroll();
+      this.needsRender = true;
+    };
+
+    const onUp = () => { dragging = null; };
+
+    vThumb.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      dragging = { type: 'v', startMouse: e.clientY, startPos: vThumb.offsetTop };
+    });
+    hThumb.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      dragging = { type: 'h', startMouse: e.clientX, startPos: hThumb.offsetLeft };
+    });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  getContainerOffset() {
+    const rect = this.container.getBoundingClientRect();
+    return { x: rect.left, y: rect.top };
+  }
+
+  onMouseDown(e) {
+    const off = this.getContainerOffset();
+    const mx = e.clientX - off.x;
+    const my = e.clientY - off.y;
+
+    // Check resize handles on headers
+    if (my < this.headerHeight && mx > this.headerWidth) {
+      // Column resize?
+      const { startCol, endCol } = this.visibleRange();
+      for (let c = startCol; c <= endCol; c++) {
+        const edge = this.getColX(c) + this.getColW(c);
+        if (Math.abs(mx - edge) < 4) {
+          this.resizing = { type: 'col', index: c, startPos: e.clientX, startSize: this.colWidths[c] };
+          e.preventDefault();
+          return;
+        }
+      }
+      return;
+    }
+    if (mx < this.headerWidth && my > this.headerHeight) {
+      // Row resize?
+      const { startRow, endRow } = this.visibleRange();
+      for (let r = startRow; r <= endRow; r++) {
+        const edge = this.getRowY(r) + this.getRowH(r);
+        if (Math.abs(my - edge) < 4) {
+          this.resizing = { type: 'row', index: r, startPos: e.clientY, startSize: this.rowHeights[r] };
+          e.preventDefault();
+          return;
+        }
+      }
+      return;
+    }
+
+    if (mx <= this.headerWidth || my <= this.headerHeight) return;
+
+    // Check autofill handle
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+    let selW = 0, selH = 0;
+    for (let c = sc1; c <= sc2; c++) selW += this.getColW(c);
+    for (let r = sr1; r <= sr2; r++) selH += this.getRowH(r);
+    const hx = this.getColX(sc1) + selW - 4;
+    const hy = this.getRowY(sr1) + selH - 4;
+    if (mx >= hx && mx <= hx + 7 && my >= hy && my <= hy + 7) {
+      this.autofilling = true;
+      this.autofillStart = { row: sr2, col: sc2 };
+      e.preventDefault();
+      return;
+    }
+
+    // Commit any current edit
+    if (this.editing) this.commitEdit();
+
+    const c = this.colAtX(mx);
+    const r = this.rowAtY(my);
+
+    if (e.shiftKey) {
+      this.selEndRow = r;
+      this.selEndCol = c;
+    } else {
+      this.selRow = r;
+      this.selCol = c;
+      this.selEndRow = r;
+      this.selEndCol = c;
+      this.selecting = true;
+    }
+
+    this.updateCellRef();
+    this.updateFormulaBar();
+    this.needsRender = true;
+  }
+
+  onMouseMove(e) {
+    const off = this.getContainerOffset();
+    const mx = e.clientX - off.x;
+    const my = e.clientY - off.y;
+
+    // Resize cursor
+    if (!this.resizing && !this.selecting && !this.autofilling) {
+      let cursor = 'cell';
+      if (my < this.headerHeight && mx > this.headerWidth) {
+        const { startCol, endCol } = this.visibleRange();
+        for (let c = startCol; c <= endCol; c++) {
+          const edge = this.getColX(c) + this.getColW(c);
+          if (Math.abs(mx - edge) < 4) { cursor = 'col-resize'; break; }
+        }
+      }
+      if (mx < this.headerWidth && my > this.headerHeight) {
+        const { startRow, endRow } = this.visibleRange();
+        for (let r = startRow; r <= endRow; r++) {
+          const edge = this.getRowY(r) + this.getRowH(r);
+          if (Math.abs(my - edge) < 4) { cursor = 'row-resize'; break; }
+        }
+      }
+      // Autofill handle cursor
+      if (!this.editing) {
+        const sr1 = Math.min(this.selRow, this.selEndRow);
+        const sr2 = Math.max(this.selRow, this.selEndRow);
+        const sc1 = Math.min(this.selCol, this.selEndCol);
+        const sc2 = Math.max(this.selCol, this.selEndCol);
+        let sw = 0, sh = 0;
+        for (let c = sc1; c <= sc2; c++) sw += this.getColW(c);
+        for (let r = sr1; r <= sr2; r++) sh += this.getRowH(r);
+        const hx = this.getColX(sc1) + sw - 4;
+        const hy = this.getRowY(sr1) + sh - 4;
+        if (mx >= hx && mx <= hx + 7 && my >= hy && my <= hy + 7) cursor = 'crosshair';
+      }
+      this.container.style.cursor = cursor;
+    }
+
+    if (this.resizing) {
+      if (this.resizing.type === 'col') {
+        const delta = (e.clientX - this.resizing.startPos) / this.zoom;
+        this.colWidths[this.resizing.index] = Math.max(20, this.resizing.startSize + delta);
+      } else {
+        const delta = (e.clientY - this.resizing.startPos) / this.zoom;
+        this.rowHeights[this.resizing.index] = Math.max(12, this.resizing.startSize + delta);
+      }
+      this.needsRender = true;
+      return;
+    }
+
+    if (this.autofilling) {
+      const r = this.rowAtY(my);
+      this.autofillEnd = { row: r, col: this.selCol };
+      this.needsRender = true;
+      return;
+    }
+
+    if (this.selecting) {
+      const c = this.colAtX(mx);
+      const r = this.rowAtY(my);
+      this.selEndRow = r;
+      this.selEndCol = c;
+      this.needsRender = true;
+    }
+  }
+
+  onMouseUp(e) {
+    if (this.resizing) {
+      this.resizing = null;
+      this.needsRender = true;
+      return;
+    }
+
+    if (this.autofilling && this.autofillEnd) {
+      this.performAutofill();
+      this.autofilling = false;
+      this.autofillEnd = null;
+      this.needsRender = true;
+      return;
+    }
+    this.autofilling = false;
+
+    this.selecting = false;
+  }
+
+  onDblClick(e) {
+    const off = this.getContainerOffset();
+    const mx = e.clientX - off.x;
+    const my = e.clientY - off.y;
+    if (mx <= this.headerWidth || my <= this.headerHeight) return;
+
+    const c = this.colAtX(mx);
+    const r = this.rowAtY(my);
+    this.selRow = r; this.selCol = c;
+    this.selEndRow = r; this.selEndCol = c;
+    this.startEdit();
+  }
+
+  onWheel(e) {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      // Zoom
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * delta));
+      this.zoom = newZoom;
+    } else {
+      // Scroll with inertia
+      this.scrollX += e.deltaX;
+      this.scrollY += e.deltaY;
+      this.velocityX = e.deltaX * 0.5;
+      this.velocityY = e.deltaY * 0.5;
+      this.clampScroll();
+    }
+    this.needsRender = true;
+  }
+
+  // Touch support
+  lastTouchPos = null;
+  lastTouchTime = 0;
+
+  onTouchStart(e) {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      this.lastTouchPos = { x: t.clientX, y: t.clientY };
+      this.lastTouchTime = Date.now();
+      this.velocityX = 0;
+      this.velocityY = 0;
+    }
+  }
+
+  onTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && this.lastTouchPos) {
+      const t = e.touches[0];
+      const dx = this.lastTouchPos.x - t.clientX;
+      const dy = this.lastTouchPos.y - t.clientY;
+      this.scrollX += dx;
+      this.scrollY += dy;
+      const now = Date.now();
+      const dt = Math.max(1, now - this.lastTouchTime);
+      this.velocityX = dx / dt * 16;
+      this.velocityY = dy / dt * 16;
+      this.lastTouchPos = { x: t.clientX, y: t.clientY };
+      this.lastTouchTime = now;
+      this.clampScroll();
+      this.needsRender = true;
+    }
+  }
+
+  onTouchEnd(e) {
+    this.lastTouchPos = null;
+  }
+
+  // ───────────── Keyboard ─────────────
+  onKeyDown(e) {
+    if (e.target === this.formulaInput) return;
+    if (this.editing) return;
+
+    // Ctrl shortcuts
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'z': e.preventDefault(); this.undo(); return;
+        case 'y': e.preventDefault(); this.redo(); return;
+        case 'c': e.preventDefault(); this.copy(); return;
+        case 'x': e.preventDefault(); this.cut(); return;
+        case 'v': e.preventDefault(); this.paste(); return;
+        case 's': e.preventDefault(); this.save(); return;
+      }
+    }
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        if (e.shiftKey) { this.selEndRow = Math.max(0, this.selEndRow - 1); }
+        else { this.selRow = Math.max(0, this.selRow - 1); this.selEndRow = this.selRow; this.selEndCol = this.selCol; }
+        this.scrollToSelection(); break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (e.shiftKey) { this.selEndRow = Math.min(this.model.totalRows - 1, this.selEndRow + 1); }
+        else { this.selRow = Math.min(this.model.totalRows - 1, this.selRow + 1); this.selEndRow = this.selRow; this.selEndCol = this.selCol; }
+        this.scrollToSelection(); break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (e.shiftKey) { this.selEndCol = Math.max(0, this.selEndCol - 1); }
+        else { this.selCol = Math.max(0, this.selCol - 1); this.selEndRow = this.selRow; this.selEndCol = this.selCol; }
+        this.scrollToSelection(); break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if (e.shiftKey) { this.selEndCol = Math.min(this.model.totalCols - 1, this.selEndCol + 1); }
+        else { this.selCol = Math.min(this.model.totalCols - 1, this.selCol + 1); this.selEndRow = this.selRow; this.selEndCol = this.selCol; }
+        this.scrollToSelection(); break;
+      case 'Tab':
+        e.preventDefault();
+        if (e.shiftKey) { this.selCol = Math.max(0, this.selCol - 1); }
+        else { this.selCol = Math.min(this.model.totalCols - 1, this.selCol + 1); }
+        this.selEndRow = this.selRow; this.selEndCol = this.selCol;
+        this.scrollToSelection(); break;
+      case 'Enter':
+        e.preventDefault();
+        if (e.shiftKey) { this.selRow = Math.max(0, this.selRow - 1); }
+        else { this.selRow = Math.min(this.model.totalRows - 1, this.selRow + 1); }
+        this.selEndRow = this.selRow; this.selEndCol = this.selCol;
+        this.scrollToSelection(); break;
+      case 'Delete':
+        e.preventDefault(); this.deleteSelection(); break;
+      case 'F2':
+        e.preventDefault(); this.startEdit(); break;
+      default:
+        // Start typing to edit
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          this.startEdit(e.key);
+          e.preventDefault();
+        }
+    }
+    this.updateCellRef();
+    this.updateFormulaBar();
+    this.needsRender = true;
+  }
+
+  scrollToSelection() {
+    const r = this.selRow;
+    const c = this.selCol;
+    const x = this.getColX(c);
+    const y = this.getRowY(r);
+    const w = this.getColW(c);
+    const h = this.getRowH(r);
+
+    if (x < this.headerWidth) {
+      this.scrollX -= (this.headerWidth - x);
+    } else if (x + w > this.width - 14) {
+      this.scrollX += (x + w - this.width + 14);
+    }
+
+    if (y < this.headerHeight) {
+      this.scrollY -= (this.headerHeight - y);
+    } else if (y + h > this.height - 14) {
+      this.scrollY += (y + h - this.height + 14);
+    }
+
+    this.clampScroll();
+  }
+
+  // ───────────── Editing ─────────────
+  startEdit(initialChar) {
+    this.editing = true;
+    const x = this.getColX(this.selCol);
+    const y = this.getRowY(this.selRow);
+    const w = this.getColW(this.selCol);
+    const h = this.getRowH(this.selRow);
+
+    const off = this.getContainerOffset();
+    this.cellEditor.style.display = 'block';
+    this.cellEditor.style.left = x + 'px';
+    this.cellEditor.style.top = y + 'px';
+    this.cellEditor.style.width = Math.max(w, 60) + 'px';
+    this.cellEditor.style.height = h + 'px';
+    this.cellEditor.style.fontSize = Math.max(8, Math.round(12 * this.zoom)) + 'px';
+
+    if (initialChar !== undefined) {
+      this.cellEditor.value = initialChar;
+    } else {
+      this.cellEditor.value = this.getCellRaw();
+    }
+
+    this.cellEditor.focus();
+    if (initialChar === undefined) {
+      this.cellEditor.setSelectionRange(0, this.cellEditor.value.length);
+    }
+  }
+
+  commitEdit() {
+    if (!this.editing) return;
+    const val = this.cellEditor.value;
+    const oldRaw = this.getCellRaw();
+
+    if (val !== oldRaw) {
+      this.undoMgr.push({
+        row: this.selRow, col: this.selCol,
+        oldVal: oldRaw, newVal: val
+      });
+      this.model.setCell(this.selRow, this.selCol, val);
+      this.model.recalcAll();
+    }
+
+    this.editing = false;
+    this.cellEditor.style.display = 'none';
+    this.updateFormulaBar();
+    this.updateStatus();
+    this.needsRender = true;
+  }
+
+  onEditorKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      this.commitEdit();
+      this.selRow = Math.min(this.model.totalRows - 1, this.selRow + 1);
+      this.selEndRow = this.selRow; this.selEndCol = this.selCol;
+      this.updateCellRef();
+      this.updateFormulaBar();
+      this.scrollToSelection();
+      this.needsRender = true;
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      this.commitEdit();
+      if (e.shiftKey) this.selCol = Math.max(0, this.selCol - 1);
+      else this.selCol = Math.min(this.model.totalCols - 1, this.selCol + 1);
+      this.selEndRow = this.selRow; this.selEndCol = this.selCol;
+      this.updateCellRef();
+      this.updateFormulaBar();
+      this.scrollToSelection();
+      this.needsRender = true;
+    } else if (e.key === 'Escape') {
+      this.editing = false;
+      this.cellEditor.style.display = 'none';
+      this.needsRender = true;
+    }
+  }
+
+  commitFormulaBar() {
+    const val = this.formulaInput.value;
+    const oldRaw = this.getCellRaw();
+    if (val !== oldRaw) {
+      this.undoMgr.push({ row: this.selRow, col: this.selCol, oldVal: oldRaw, newVal: val });
+      this.model.setCell(this.selRow, this.selCol, val);
+      this.model.recalcAll();
+    }
+    this.formulaInput.blur();
+    this.updateStatus();
+    this.needsRender = true;
+  }
+
+  getCellRaw() {
+    const cell = this.model.getCell(this.selRow, this.selCol);
+    return cell ? cell.raw : '';
+  }
+
+  updateCellRef() {
+    this.cellRefEl.textContent = colLabel(this.selCol) + (this.selRow + 1);
+  }
+
+  updateFormulaBar() {
+    this.formulaInput.value = this.getCellRaw();
+  }
+
+  updateStatus() {
+    // Show sum/count/average of selection
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+
+    const nums = [];
+    let count = 0;
+    for (let r = sr1; r <= sr2; r++) {
+      for (let c = sc1; c <= sc2; c++) {
+        const cell = this.model.getCell(r, c);
+        if (cell && cell.value !== '' && cell.value != null) {
+          count++;
+          if (typeof cell.value === 'number') nums.push(cell.value);
+        }
+      }
+    }
+
+    if (nums.length > 1) {
+      const sum = nums.reduce((a, b) => a + b, 0);
+      const avg = sum / nums.length;
+      this.statusRight.textContent = `Suma: ${sum.toFixed(2)}  Promedio: ${avg.toFixed(2)}  Cuenta: ${count}`;
+    } else {
+      this.statusRight.textContent = '';
+    }
+  }
+
+  // ───────────── Copy/Paste/Cut ─────────────
+  copy() {
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+
+    let tsv = '';
+    for (let r = sr1; r <= sr2; r++) {
+      const row = [];
+      for (let c = sc1; c <= sc2; c++) {
+        const cell = this.model.getCell(r, c);
+        row.push(cell ? String(cell.value) : '');
+      }
+      tsv += row.join('\t') + '\n';
+    }
+    navigator.clipboard.writeText(tsv).catch(() => {});
+    this.statusLeft.textContent = 'Copiado al portapapeles';
+  }
+
+  cut() {
+    this.copy();
+    this.deleteSelection();
+    this.statusLeft.textContent = 'Cortado al portapapeles';
+  }
+
+  async paste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      const rows = text.split('\n').filter(r => r.length > 0);
+      const actions = [];
+
+      for (let ri = 0; ri < rows.length; ri++) {
+        const cols = rows[ri].split('\t');
+        for (let ci = 0; ci < cols.length; ci++) {
+          const r = this.selRow + ri;
+          const c = this.selCol + ci;
+          if (r >= this.model.totalRows || c >= this.model.totalCols) continue;
+          const oldRaw = this.getCellRawAt(r, c);
+          actions.push({ row: r, col: c, oldVal: oldRaw, newVal: cols[ci] });
+          this.model.setCell(r, c, cols[ci]);
+        }
+      }
+
+      if (actions.length) {
+        this.undoMgr.push({ multi: true, actions });
+        this.model.recalcAll();
+      }
+      this.statusLeft.textContent = 'Pegado';
+      this.needsRender = true;
+    } catch { this.statusLeft.textContent = 'Error al pegar'; }
+  }
+
+  getCellRawAt(r, c) {
+    const cell = this.model.getCell(r, c);
+    return cell ? cell.raw : '';
+  }
+
+  deleteSelection() {
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+    const actions = [];
+
+    for (let r = sr1; r <= sr2; r++) {
+      for (let c = sc1; c <= sc2; c++) {
+        const oldRaw = this.getCellRawAt(r, c);
+        if (oldRaw !== '') {
+          actions.push({ row: r, col: c, oldVal: oldRaw, newVal: '' });
+          this.model.deleteCell(r, c);
+        }
+      }
+    }
+    if (actions.length) {
+      this.undoMgr.push({ multi: true, actions });
+      this.model.recalcAll();
+    }
+    this.updateFormulaBar();
+    this.needsRender = true;
+  }
+
+  // ───────────── Undo/Redo ─────────────
+  undo() {
+    const action = this.undoMgr.undo();
+    if (!action) return;
+    if (action.multi) {
+      for (const a of action.actions) {
+        if (a.oldVal === '') this.model.deleteCell(a.row, a.col);
+        else this.model.setCell(a.row, a.col, a.oldVal);
+      }
+    } else {
+      if (action.oldVal === '') this.model.deleteCell(action.row, action.col);
+      else this.model.setCell(action.row, action.col, action.oldVal);
+    }
+    this.model.recalcAll();
+    this.updateFormulaBar();
+    this.statusLeft.textContent = 'Deshacer';
+    this.needsRender = true;
+  }
+
+  redo() {
+    const action = this.undoMgr.redo();
+    if (!action) return;
+    if (action.multi) {
+      for (const a of action.actions) {
+        if (a.newVal === '') this.model.deleteCell(a.row, a.col);
+        else this.model.setCell(a.row, a.col, a.newVal);
+      }
+    } else {
+      if (action.newVal === '') this.model.deleteCell(action.row, action.col);
+      else this.model.setCell(action.row, action.col, action.newVal);
+    }
+    this.model.recalcAll();
+    this.updateFormulaBar();
+    this.statusLeft.textContent = 'Rehacer';
+    this.needsRender = true;
+  }
+
+  // ───────────── Autofill ─────────────
+  performAutofill() {
+    const sr1 = Math.min(this.selRow, this.selEndRow);
+    const sr2 = Math.max(this.selRow, this.selEndRow);
+    const sc1 = Math.min(this.selCol, this.selEndCol);
+    const sc2 = Math.max(this.selCol, this.selEndCol);
+    const endRow = this.autofillEnd.row;
+
+    if (endRow <= sr2) return;
+
+    const actions = [];
+    const srcRows = sr2 - sr1 + 1;
+
+    for (let r = sr2 + 1; r <= endRow; r++) {
+      const srcR = sr1 + ((r - sr1) % srcRows);
+      for (let c = sc1; c <= sc2; c++) {
+        const srcCell = this.model.getCell(srcR, c);
+        const oldRaw = this.getCellRawAt(r, c);
+        let newVal = '';
+
+        if (srcCell) {
+          if (srcCell.type === 'number' && !srcCell.raw.startsWith('=')) {
+            // Simple numeric series: increment by pattern
+            const base = Number(srcCell.raw);
+            const offset = r - srcR;
+            newVal = String(base + offset);
+          } else {
+            newVal = srcCell.raw;
+          }
+        }
+
+        actions.push({ row: r, col: c, oldVal: oldRaw, newVal });
+        this.model.setCell(r, c, newVal);
+      }
+    }
+
+    if (actions.length) {
+      this.undoMgr.push({ multi: true, actions });
+      this.model.recalcAll();
+      this.selEndRow = endRow;
+    }
+  }
+
+  // ───────────── Freeze ─────────────
+  toggleFreeze() {
+    this.freezeRow = !this.freezeRow;
+    this.freezeCol = !this.freezeCol;
+    document.getElementById('freeze-toggle').textContent =
+      this.freezeRow ? 'Descongelar' : 'Congelar';
+    this.needsRender = true;
+  }
+
+  // ───────────── Save/Load ─────────────
+  save() {
+    const data = {
+      cells: {},
+      colWidths: Array.from(this.colWidths),
+      rowHeights: Array.from(this.rowHeights)
+    };
+    for (const [k, cell] of this.model.cells) {
+      data.cells[k] = cell.raw;
+    }
+    localStorage.setItem('spreadsheet-data', JSON.stringify(data));
+    this.statusLeft.textContent = 'Guardado en localStorage';
+  }
+
+  load() {
+    const json = localStorage.getItem('spreadsheet-data');
+    if (!json) { this.statusLeft.textContent = 'No hay datos guardados'; return; }
+    try {
+      const data = JSON.parse(json);
+      this.model.cells.clear();
+      for (const [k, raw] of Object.entries(data.cells)) {
+        const [r, c] = k.split(',').map(Number);
+        this.model.setCell(r, c, raw);
+      }
+      if (data.colWidths) {
+        for (let i = 0; i < Math.min(data.colWidths.length, this.colWidths.length); i++) {
+          this.colWidths[i] = data.colWidths[i];
+        }
+      }
+      if (data.rowHeights) {
+        for (let i = 0; i < Math.min(data.rowHeights.length, this.rowHeights.length); i++) {
+          this.rowHeights[i] = data.rowHeights[i];
+        }
+      }
+      this.model.recalcAll();
+      this.statusLeft.textContent = 'Datos cargados';
+      this.needsRender = true;
+    } catch { this.statusLeft.textContent = 'Error al cargar datos'; }
+  }
+
+  newSheet() {
+    if (!confirm('¿Crear nueva hoja? Se perderán los cambios no guardados.')) return;
+    this.model.cells.clear();
+    this.colWidths.fill(80);
+    this.rowHeights.fill(22);
+    this.scrollX = 0; this.scrollY = 0;
+    this.selRow = 0; this.selCol = 0;
+    this.selEndRow = 0; this.selEndCol = 0;
+    this.undoMgr = new UndoManager();
+    this.updateCellRef();
+    this.updateFormulaBar();
+    this.statusLeft.textContent = 'Nueva hoja creada';
+    this.needsRender = true;
+  }
+
+  // ───────────── CSV Export/Import ─────────────
+  exportCSV() {
+    // Find used range
+    let maxR = 0, maxC = 0;
+    for (const k of this.model.cells.keys()) {
+      const [r, c] = k.split(',').map(Number);
+      maxR = Math.max(maxR, r);
+      maxC = Math.max(maxC, c);
+    }
+
+    let csv = '';
+    for (let r = 0; r <= maxR; r++) {
+      const row = [];
+      for (let c = 0; c <= maxC; c++) {
+        const cell = this.model.getCell(r, c);
+        let val = cell ? String(cell.value) : '';
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = '"' + val.replace(/"/g, '""') + '"';
+        }
+        row.push(val);
+      }
+      csv += row.join(',') + '\n';
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'spreadsheet.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    this.statusLeft.textContent = 'CSV exportado';
+  }
+
+  importCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      this.parseAndLoadCSV(text);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  parseAndLoadCSV(text) {
+    this.model.cells.clear();
+    const rows = this.parseCSV(text);
+    for (let r = 0; r < rows.length; r++) {
+      for (let c = 0; c < rows[r].length; c++) {
+        if (rows[r][c] !== '') {
+          this.model.setCell(r, c, rows[r][c]);
+        }
+      }
+    }
+    this.model.recalcAll();
+    this.selRow = 0; this.selCol = 0;
+    this.selEndRow = 0; this.selEndCol = 0;
+    this.scrollX = 0; this.scrollY = 0;
+    this.updateCellRef();
+    this.updateFormulaBar();
+    this.statusLeft.textContent = `CSV importado: ${rows.length} filas`;
+    this.needsRender = true;
+  }
+
+  parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { cell += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          cell += ch;
+        }
+      } else {
+        if (ch === '"') { inQuotes = true; }
+        else if (ch === ',') { row.push(cell); cell = ''; }
+        else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+        else if (ch === '\r') { /* skip */ }
+        else { cell += ch; }
+      }
+    }
+    if (cell !== '' || row.length > 0) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+}
+
+// Start the app
+const spreadsheet = new Spreadsheet();
+window.spreadsheet = spreadsheet;
+
+</script>
+</body>
+</html>
